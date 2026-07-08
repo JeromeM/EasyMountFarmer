@@ -25,42 +25,49 @@ SAMountsLocations = {
   ["Run Throne of the Four Winds (Raid)"] = {
     map = 249, x = 38.4, y = 80.6,   -- Uldum
     lockout = "Throne of the Four Winds",
+    instanceId = 754,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = { [88744] = 1034 },  -- Al'Akir -> Drake of the South Wind
   },
   ["Run Ahn'Qiraj (Raid)"] = {
     map = 81, x = 27.1, y = 93.6,   -- Silithus (Gates of Ahn'Qiraj) -- unsure coords
     lockout = "Ahn'Qiraj Temple",
+    instanceId = 531,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = {},  -- Qiraji crystals drop from trash, no ENCOUNTER_END
   },
   ["Run Onyxia (Raid)"] = {
     map = 70, x = 52.5, y = 76.5,   -- Dustwallow Marsh (Wyrmbog)
     lockout = "Onyxia's Lair",
+    instanceId = 249,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = { [69395] = 1084 },  -- Onyxia
   },
   ["Run Icecrown Citadel (Raid)"] = {
     map = 118, x = 53.6, y = 87.2,   -- Icecrown
     lockout = "Icecrown Citadel",
+    instanceId = 631,
     reqDiff = 6, diffScope = "legacyRaid",  -- 25 Player Heroic
     encounters = { [72286] = 1106 },  -- The Lich King -> Invincible's Reins
   },
   ["Run Vault of Archavon (Raid)"] = {
     map = 123, x = 50.0, y = 15.0,   -- Wintergrasp -- unsure coords
     lockout = "Vault of Archavon",
+    instanceId = 624,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = {},  -- Grand Black War Mammoth has no mount spellId; bosses 1126/1127/1128/1129
   },
   ["Run Eye of Eternity (Raid)"] = {
     map = 114, x = 27.6, y = 26.6,   -- Borean Tundra (Coldarra)
     lockout = "The Eye of Eternity",
+    instanceId = 616,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = { [59567] = 1094, [59568] = 1094 },  -- Malygos -> Azure Drake / Blue Drake
   },
   ["Run Obsidian Sanctum (Raid)"] = {
     map = 115, x = 59.3, y = 49.3,   -- Dragonblight (below Wyrmrest Temple)
     lockout = "The Obsidian Sanctum",
+    instanceId = 615,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = { [59650] = 1090, [59571] = 1090 },  -- Sartharion -> Black Drake / Twilight Drake
   },
@@ -73,12 +80,14 @@ SAMountsLocations = {
   ["Run Ulduar (Raid)"] = {
     map = 120, x = 41.0, y = 18.0,   -- The Storm Peaks
     lockout = "Ulduar",
+    instanceId = 603,
     reqDiff = nil, diffScope = "legacyRaid",  -- Mimiron's Head: Yogg-Saron with 0 keepers
     encounters = { [63796] = 1143 },  -- Yogg-Saron -> Mimiron's Head
   },
   ["Run Firelands on both Normal and Heroic (Raid)"] = {
     map = 198, x = 47.7, y = 78.3,   -- Mount Hyjal (Sulfuron Spire)
     lockout = "Firelands",
+    instanceId = 720,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = { [101542] = 1206, [97493] = 1203 },  -- Alysrazor -> Flametalon ; Ragnaros -> Egg of Millagazor
   },
@@ -91,6 +100,7 @@ SAMountsLocations = {
   ["Run Dragon Soul (Raid)"] = {
     map = 75, x = 62.2, y = 28.2,   -- Caverns of Time portal -- unsure (Tanaris 71 ~64,49)
     lockout = "Dragon Soul",
+    instanceId = 967,
     reqDiff = nil, diffScope = "legacyRaid",  -- Life-Binder's Handmaiden (107845) is Heroic-only
     encounters = { [110039] = 1297, [107842] = 1299, [107845] = 1299 },  -- Ultraxion ; Madness of Deathwing
   },
@@ -109,6 +119,7 @@ SAMountsLocations = {
   ["Run Tempest Keep (Raid)"] = {
     map = 109, x = 73.5, y = 63.7,   -- Netherstorm
     lockout = "Tempest Keep",  -- unsure: UI often shows "The Eye"
+    instanceId = 550,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = { [40192] = 733 },  -- Kael'thas Sunstrider -> Ashes of Al'ar
   },
@@ -133,6 +144,7 @@ SAMountsLocations = {
   ["Run Karazhan (Raid)"] = {
     map = 42, x = 46.8, y = 74.1,   -- Deadwind Pass
     lockout = "Karazhan",
+    instanceId = 532,
     reqDiff = nil, diffScope = "legacyRaid",
     encounters = { [36702] = 652 },  -- Attumen the Huntsman -> Fiery Warhorse's Reins
   },
@@ -169,6 +181,7 @@ SAMountsLocations = {
   ["Run Mogu'shan Vaults (Raid)"] = {
     map = 379, x = 59.2, y = 39.6,   -- Kun-Lai Summit (Mogu'shan Terrace)
     lockout = "Mogu'shan Vaults",
+    instanceId = 1008,
     reqDiff = nil, diffScope = "raid",
     encounters = { [127170] = 1500 },  -- Elegon -> Reins of the Astral Cloud Serpent
   },
@@ -181,12 +194,14 @@ SAMountsLocations = {
   ["Run Throne of Thunder (Raid)"] = {
     map = 504, x = 63.7, y = 32.2,   -- Isle of Thunder
     lockout = "Throne of Thunder",
+    instanceId = 1098,
     reqDiff = nil, diffScope = "raid",
     encounters = { [136471] = 1575, [139448] = 1573 },  -- Horridon -> Spawn ; Ji-Kun -> Clutch
   },
   ["Run Siege of Orgrimmar (Raid)"] = {
     map = 1530, x = 74.0, y = 42.0,   -- Vale of Eternal Blossoms (retail 12.x)
     lockout = "Siege of Orgrimmar",
+    instanceId = 1136,
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [148417] = 1623 },  -- Garrosh Hellscream -> Kor'kron Juggernaut
   },
@@ -199,36 +214,42 @@ SAMountsLocations = {
   ["Run Hellfire Citadel (Raid)"] = {
     map = 534, x = 53.5, y = 58.1,   -- Tanaan Jungle
     lockout = "Hellfire Citadel",
+    instanceId = 1448,
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [182912] = 1799 },  -- Archimonde -> Felsteel Annihilator
   },
   ["Run Blackrock Foundry (Raid)"] = {
     map = 543, x = 51.7, y = 29.0,   -- Gorgrond
     lockout = "Blackrock Foundry",
+    instanceId = 1205,
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [171621] = 1704 },  -- Blackhand -> Ironhoof Destroyer
   },
   ["Run Nighthold (Raid)"] = {
     map = 680, x = 45.8, y = 64.5,   -- Suramar
     lockout = "The Nighthold",
+    instanceId = 1530,
     reqDiff = nil, diffScope = "raid",  -- Fiendish Hellfire Core (171827) is Mythic only
     encounters = { [213134] = 1866, [171827] = 1866 },  -- Gul'dan (both mounts)
   },
   ["Run Tomb of Sargeras (Raid)"] = {
     map = 646, x = 63.6, y = 21.8,   -- Broken Shore
     lockout = "Tomb of Sargeras",
+    instanceId = 1676,
     reqDiff = nil, diffScope = "raid",
     encounters = { [232519] = 2037 },  -- Mistress Sassz'ine -> Abyss Worm
   },
   ["Run Antorus, the Burning Throne (Raid)"] = {
     map = 885, x = 50.0, y = 70.0,   -- Antoran Wastes
     lockout = "Antorus, the Burning Throne",
+    instanceId = 1712,
     reqDiff = nil, diffScope = "raid",  -- Shackled Ur'zul (243651) is Mythic only
     encounters = { [253088] = 2074, [243651] = 2092 },  -- Felhounds ; Argus the Unmaker
   },
   ["Run Battle of Dazar'alor (Raid)"] = {
     map = 1165, x = 38.8, y = 2.4,   -- Dazar'alor (Horde); Alliance = Boralus (1161) ~70.5,35.3
     lockout = "Battle of Dazar'alor",
+    instanceId = 2070,
     reqDiff = nil, diffScope = "raid",  -- Glacial Tidestorm (289555) is Mythic only
     encounters = { [289083] = 2276, [289555] = 2281 },  -- Mekkatorque ; Jaina Proudmoore
   },
@@ -259,6 +280,7 @@ SAMountsLocations = {
   ["Run Ny'alotha the Waking City (Raid)"] = {
     map = 1527, x = 55.1, y = 43.8,   -- Uldum (N'Zoth assault); Vale (1530) ~41.6,45.5
     lockout = "Ny'alotha, the Waking City",
+    instanceId = 2217,
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [308814] = 2344 },  -- N'Zoth the Corruptor -> Ny'alotha Allseer
   },
@@ -277,12 +299,14 @@ SAMountsLocations = {
   ["Run Sanctum of Domination (Raid)"] = {
     map = 1543, x = 69.7, y = 31.8,   -- The Maw (Desmotaeron)
     lockout = "Sanctum of Domination",
+    instanceId = 2450,
     reqDiff = nil, diffScope = "raid",  -- Vengeance (351195) is Mythic only
     encounters = { [354351] = 2429, [351195] = 2435 },  -- The Nine ; Sylvanas Windrunner
   },
   ["Run Sepulcher of the First Ones (Raid)"] = {
     map = 1970, x = 80.6, y = 53.4,   -- Zereth Mortis
     lockout = "Sepulcher of the First Ones",
+    instanceId = 2481,
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [368158] = 2537 },  -- The Jailer -> Zereth Overseer
   },
@@ -295,6 +319,7 @@ SAMountsLocations = {
   ["Run Amirdrassil, the Dream's Hope (Raid)"] = {
     map = 2200, x = 27.0, y = 31.0,   -- Emerald Dream
     lockout = "Amirdrassil, the Dream's Hope",
+    instanceId = 2549,
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [424484] = 2677 },  -- Fyrakk the Blazing -> Anu'relos
   },
@@ -313,18 +338,21 @@ SAMountsLocations = {
   ["Run Nerub-ar Palace (Raid)"] = {
     map = 2213, x = 35.3, y = 72.0,   -- City of Threads (Azj-Kahet 2255 ~45.1,90.7)
     lockout = "Nerub-ar Palace",
+    instanceId = 2657,
     reqDiff = nil, diffScope = "raid",  -- Ascendant Skyrazor (451491) is Mythic only
     encounters = { [451486] = 2922, [451491] = 2922 },  -- Queen Ansurek (both mounts)
   },
   ["Run Liberation of Undermine (Raid)"] = {
     map = 2346, x = 41.6, y = 48.8,   -- Undermine
     lockout = "Liberation of Undermine",
+    instanceId = 2769,
     reqDiff = nil, diffScope = "raid",  -- The Big G (235626) is Mythic only
     encounters = { [1221155] = 3016, [235626] = 3016 },  -- Chrome King Gallywix (both mounts)
   },
   ["Run Manaforge Omega (Raid)"] = {
     map = 2371, x = 42.0, y = 21.5,   -- K'aresh (Shadow Point) -- unsure coords
     lockout = "Manaforge Omega",
+    -- instanceId TODO (recent raid): run /sam debug while saved to read it; needed for non-enUS auto-skip
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [1234573] = 3135 },  -- Dimensius -> Unbound Star-Eater
   },
@@ -337,6 +365,7 @@ SAMountsLocations = {
   ["Run March on Quel'Danas (Raid)"] = {
     map = 2424, x = 52.7, y = 84.9,   -- Isle of Quel'Danas (Midnight) -- unsure (preview)
     lockout = "March on Quel'Danas",
+    -- instanceId TODO (recent raid): run /sam debug while saved to read it; needed for non-enUS auto-skip
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [1242904] = 3182 },  -- -> Ashes of Belo'ren -- unsure (preview)
   },
