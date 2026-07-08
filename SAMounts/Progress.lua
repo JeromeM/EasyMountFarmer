@@ -76,14 +76,20 @@ function Progress.Rebuild(resetPointer)
 
   ns.allTargets = ns.Route.BuildTargets()
 
-  local active = {}
+  -- "lowPriority" runs have no reset lock (farmable any time, e.g. Stratholme
+  -- Baron): keep them but push them to the very end so time-gated content comes first.
+  local loc = SAMountsLocations or {}
+  local normal, low = {}, {}
   for _, t in ipairs(ns.allTargets) do
     local d = ns.charDB.doneRuns[t.key]
     local done = Progress.IsDoneByQuest(t.key) or (d and Progress.IsDoneValid(d))
     if not done then
-      active[#active + 1] = t
+      local l = loc[t.key]
+      if l and l.lowPriority then low[#low + 1] = t else normal[#normal + 1] = t end
     end
   end
+  for _, t in ipairs(low) do normal[#normal + 1] = t end
+  local active = normal
   ns.activeTargets = active
 
   local idx = ns.charDB.currentIdx or 1

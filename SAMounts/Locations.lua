@@ -145,7 +145,7 @@ SAMountsLocations = {
   ["Run Stratholme (Dungeon)"] = {
     map = 23, x = 27.1, y = 11.6,   -- Eastern Plaguelands (main gate)
     lockout = "Stratholme",
-    instanceId = 329,
+    lowPriority = true,  -- no lockout: farmable in a loop (Baron mount ~0.02%); shown last
     reqDiff = nil, diffScope = "dungeon",
     encounters = { [17481] = 484 },  -- Baron Rivendare -> Deathcharger's Reins
   },
