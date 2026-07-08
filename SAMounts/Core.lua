@@ -70,8 +70,9 @@ SlashCmdList.SAMOUNTS = function(msg)
     ns.Print("client locale: " .. GetLocale())
     ns.Print("saved instances (" .. GetNumSavedInstances() .. "):")
     for i = 1, GetNumSavedInstances() do
-      local name, _, reset, diff, locked = GetSavedInstanceInfo(i)
-      print(string.format("  |cffffff00%s|r  locked=%s reset=%s diffID=%s", tostring(name), tostring(locked), tostring(reset), tostring(diff)))
+      local info = { GetSavedInstanceInfo(i) }
+      print(string.format("  |cffffff00%s|r  instanceId=%s locked=%s reset=%s diffID=%s",
+        tostring(info[1]), tostring(info[14]), tostring(info[5]), tostring(info[3]), tostring(info[4])))
     end
     local cur = ns.Progress.Current()
     if cur then

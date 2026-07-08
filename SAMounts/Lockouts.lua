@@ -9,19 +9,24 @@ function Lockouts.Scan()
   if not ns.charDB or not ns.Progress then return end
   local loc = SAMountsLocations or {}
 
-  -- map lockout name -> target (among still-active/relevant targets)
-  local byLockout = {}
+  -- Match saved instances by stable instanceId (locale-independent), with the
+  -- English lockout name only as a fallback for enUS clients.
+  local byInstanceId, byName = {}, {}
   for _, t in ipairs(ns.allTargets or {}) do
     local l = loc[t.key]
-    if l and l.lockout then byLockout[l.lockout] = t end
+    if l then
+      if l.instanceId then byInstanceId[l.instanceId] = t end
+      if l.lockout then byName[l.lockout] = t end
+    end
   end
-  if not next(byLockout) then return end
+  if not next(byInstanceId) and not next(byName) then return end
 
   local changed = false
   for i = 1, GetNumSavedInstances() do
-    local name, _, reset, _, locked = GetSavedInstanceInfo(i)
-    if locked and reset and reset > 0 and name then
-      local t = byLockout[name]
+    local info = { GetSavedInstanceInfo(i) }
+    local name, reset, locked, instanceId = info[1], info[3], info[5], info[14]
+    if locked and reset and reset > 0 then
+      local t = (instanceId and byInstanceId[instanceId]) or (name and byName[name])
       if t then
         ns.charDB.doneRuns[t.key] = { at = time(), type = t.type or "Raid" }
         changed = true
