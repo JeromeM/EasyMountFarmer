@@ -74,6 +74,19 @@ function UI.Init()
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
 
+  -- reset-all button (top-right, with confirmation)
+  StaticPopupDialogs["SAMOUNTS_RESET_ALL"] = {
+    text = L["Reset all completed steps for this reset?"],
+    button1 = YES, button2 = NO,
+    OnAccept = function() ns.Progress.ResetAllDone() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+  }
+  f.resetAll = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  f.resetAll:SetSize(84, 18)
+  f.resetAll:SetPoint("RIGHT", close, "LEFT", -2, 0)
+  f.resetAll:SetText(L["Reset all"])
+  f.resetAll:SetScript("OnClick", function() StaticPopup_Show("SAMOUNTS_RESET_ALL") end)
+
   -- header (progress + counts)
   f.header = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
   f.header:SetPoint("TOPLEFT", 18, -44)

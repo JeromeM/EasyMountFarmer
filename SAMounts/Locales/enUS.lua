@@ -19,6 +19,8 @@ L["Next >"] = "Next >"
 L["Guide me"] = "Guide me"
 L["Done"] = "Done"
 L["Mark as done until the next reset"] = "Mark as done until the next reset"
+L["Reset all"] = "Reset all"
+L["Reset all completed steps for this reset?"] = "Reset all completed steps for this reset?"
 L["Mount obtained!"] = "Mount obtained!"
 
 -- breadcrumb

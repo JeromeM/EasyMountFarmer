@@ -135,9 +135,12 @@ function Progress.MarkDone(key, ptype)
 end
 
 -- Manually clear per-reset completions (button / slash command).
+-- Clears manual "Done" marks; genuinely-locked instances re-hide on the next
+-- lockout scan, which we re-trigger here.
 function Progress.ResetAllDone()
   wipe(ns.charDB.doneRuns)
   Progress.Rebuild(true)
+  if RequestRaidInfo then RequestRaidInfo() end
 end
 
 -- --- reset handling -------------------------------------------------------
