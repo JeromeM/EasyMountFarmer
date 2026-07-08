@@ -8,6 +8,8 @@
 ## OptionalDeps: TomTom
 ## X-Website: https://simplearmory.com
 
+Locale.lua
+Locales\enUS.lua
 RouteData.lua
 Locations.lua
 Route.lua

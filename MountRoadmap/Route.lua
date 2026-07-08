@@ -5,10 +5,11 @@
 local ADDON, ns = ...
 ns.Route = ns.Route or {}
 local Route = ns.Route
+local L = ns.L
 
--- English capital name for the faction, used in the "capital" breadcrumb entry.
+-- Capital name for the faction, used in the "capital" breadcrumb entry.
 local function CapitalName(isAlliance)
-  return isAlliance and "Stormwind" or "Orgrimmar"
+  return isAlliance and L["Stormwind"] or L["Orgrimmar"]
 end
 
 -- True if the mount (mount journal ID) is already collected.
@@ -88,7 +89,7 @@ function Route.BuildTargets()
         local label = step.title
         local entry
         if step.capital then
-          entry = { label = "Hearthstone: " .. CapitalName(isAlliance), capital = true }
+          entry = { label = string.format(L["Hearthstone: %s"], CapitalName(isAlliance)), capital = true }
         elseif label and label ~= "" and label ~= "Start in " then
           entry = { label = label }
         end

@@ -2,6 +2,7 @@
 -- reset check. Loads last, so it can wire all other modules together.
 
 local ADDON, ns = ...
+local L = ns.L
 
 local function initSavedVars()
   MountRoadmapDB = MountRoadmapDB or {}
@@ -53,19 +54,19 @@ SlashCmdList.MOUNTROADMAP = function(msg)
     ns.Waypoint.GuideTo(ns.Progress.Current())
   elseif msg == "reset" then
     ns.Progress.ResetAllDone()
-    print("|cffffd200Mount Roadmap|r: per-reset progress cleared.")
+    ns.Print(L["Per-reset progress cleared."])
   elseif msg == "minimap" then
     ns.db.minimap.hide = not ns.db.minimap.hide
     if ns.Minimap.button then
       ns.Minimap.button:SetShown(not ns.db.minimap.hide)
     end
   elseif msg == "help" then
-    print("|cffffd200Mount Roadmap|r commands:")
-    print("  /mr — open/close the window")
-    print("  /mr next | prev — navigate steps")
-    print("  /mr guide — set a waypoint to the current step")
-    print("  /mr reset — clear this-reset progress")
-    print("  /mr minimap — toggle the minimap button")
+    ns.Print(L["Commands:"])
+    print("  " .. L["/mr — open/close the window"])
+    print("  " .. L["/mr next | prev — navigate steps"])
+    print("  " .. L["/mr guide — set a waypoint to the current step"])
+    print("  " .. L["/mr reset — clear this-reset progress"])
+    print("  " .. L["/mr minimap — toggle the minimap button"])
   else
     ns.UI.Toggle()
   end

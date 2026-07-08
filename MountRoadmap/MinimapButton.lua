@@ -4,6 +4,7 @@
 local ADDON, ns = ...
 ns.Minimap = ns.Minimap or {}
 local Minimap = ns.Minimap
+local L = ns.L
 
 local RADIUS = 80
 
@@ -39,7 +40,7 @@ function Minimap.Init()
   btn:SetScript("OnClick", function(_, mouseButton)
     if mouseButton == "RightButton" then
       ns.Progress.ResetAllDone()
-      print("|cffffd200Mount Roadmap|r: per-reset progress cleared.")
+      ns.Print(L["Per-reset progress cleared."])
     else
       ns.UI.Toggle()
     end
@@ -59,9 +60,9 @@ function Minimap.Init()
 
   btn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:AddLine("Mount Roadmap")
-    GameTooltip:AddLine("Left-click: open/close", 1, 1, 1)
-    GameTooltip:AddLine("Right-click: reset this-reset progress", 1, 1, 1)
+    GameTooltip:AddLine(L["Mount Roadmap"])
+    GameTooltip:AddLine(L["Left-click: open/close"], 1, 1, 1)
+    GameTooltip:AddLine(L["Right-click: reset this-reset progress"], 1, 1, 1)
     GameTooltip:Show()
   end)
   btn:SetScript("OnLeave", GameTooltip_Hide)

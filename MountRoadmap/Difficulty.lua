@@ -4,13 +4,14 @@
 local ADDON, ns = ...
 ns.Difficulty = ns.Difficulty or {}
 local Difficulty = ns.Difficulty
+local L = ns.L
 
--- Short labels per difficultyID.
+-- Short labels per difficultyID (localized).
 local DIFF_LABEL = {
-  [1] = "Normal", [2] = "Heroic", [23] = "Mythic", [8] = "Mythic Keystone",
-  [14] = "Normal", [15] = "Heroic", [16] = "Mythic", [17] = "Looking For Raid",
-  [3] = "10 Player", [4] = "25 Player", [5] = "10 Player Heroic", [6] = "25 Player Heroic",
-  [7] = "Looking For Raid", [9] = "40 Player",
+  [1] = L["Normal"], [2] = L["Heroic"], [23] = L["Mythic"], [8] = L["Mythic Keystone"],
+  [14] = L["Normal"], [15] = L["Heroic"], [16] = L["Mythic"], [17] = L["Looking For Raid"],
+  [3] = L["10 Player"], [4] = L["25 Player"], [5] = L["10 Player Heroic"], [6] = L["25 Player Heroic"],
+  [7] = L["Looking For Raid"], [9] = L["40 Player"],
 }
 
 local GETTERS = {
@@ -46,22 +47,22 @@ end
 -- Button text, e.g. "Switch to Mythic".
 function Difficulty.SwitchLabel(target)
   local l = locFor(target)
-  if not l or not l.reqDiff then return "Difficulty" end
-  return "Switch to " .. (DIFF_LABEL[l.reqDiff] or ("difficulty " .. l.reqDiff))
+  if not l or not l.reqDiff then return L["Difficulty"] end
+  return string.format(L["Switch to %s"], DIFF_LABEL[l.reqDiff] or tostring(l.reqDiff))
 end
 
 function Difficulty.SwitchTo(target)
   local l = locFor(target)
   if not l or not l.reqDiff or not l.diffScope then return end
   if InCombatLockdown() then
-    print("|cffffd200Mount Roadmap|r: cannot change difficulty in combat.")
+    ns.Print(L["Cannot change difficulty in combat."])
     return
   end
   local fn = _G[SETTERS[l.diffScope] or ""]
   if not fn then return end
   local ok = pcall(fn, l.reqDiff)
   if not ok then
-    print("|cffffd200Mount Roadmap|r: cannot change difficulty (party leader required, or already inside the instance).")
+    ns.Print(L["Cannot change difficulty (party leader required, or already inside the instance)."])
   end
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end

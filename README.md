@@ -35,3 +35,13 @@ Cela réécrit `MountRoadmap/RouteData.lua` et régénère `scripts/Locations.sk
 
 Pour resynchroniser après une mise à jour du site : recopier `static/data/planner.json` de SimpleArmory
 dans `data/planner.json`, puis relancer le build.
+
+`node scripts/check-lua.mjs` valide la syntaxe de tous les `.lua` (via `luaparse`).
+
+## Traductions
+
+Tous les textes affichés passent par une table de locale (`ns.L`, mise en place dans `Locale.lua`).
+Seul l'anglais (`Locales/enUS.lua`) est fourni pour l'instant. Pour ajouter une langue : copier
+`Locales/enUS.lua` en `Locales/frFR.lua`, ajouter `if GetLocale() ~= "frFR" then return end` en tête,
+traduire les valeurs, et référencer le fichier dans `MountRoadmap.toc`. Les clés manquantes retombent
+automatiquement sur le texte anglais (la clé).

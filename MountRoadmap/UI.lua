@@ -5,6 +5,7 @@
 local ADDON, ns = ...
 ns.UI = ns.UI or {}
 local UI = ns.UI
+local L = ns.L
 
 local MAX_ROWS = 4          -- max bosses shown at once (AQ drops 4 crystals)
 local EPIC = "|cffa335ee"
@@ -67,7 +68,7 @@ function UI.Init()
   -- title
   local title = f:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
   title:SetPoint("TOP", 0, -16)
-  title:SetText("Mount Roadmap")
+  title:SetText(L["Mount Roadmap"])
 
   -- close button
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
@@ -154,19 +155,19 @@ function UI.Init()
   f.prev = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   f.prev:SetSize(92, 22)
   f.prev:SetPoint("BOTTOMLEFT", 16, 14)
-  f.prev:SetText("< Prev")
+  f.prev:SetText(L["< Prev"])
   f.prev:SetScript("OnClick", function() ns.Progress.Prev() end)
 
   f.next = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   f.next:SetSize(92, 22)
   f.next:SetPoint("LEFT", f.prev, "RIGHT", 6, 0)
-  f.next:SetText("Next >")
+  f.next:SetText(L["Next >"])
   f.next:SetScript("OnClick", function() ns.Progress.Next() end)
 
   f.guide = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   f.guide:SetSize(110, 22)
   f.guide:SetPoint("BOTTOMRIGHT", -16, 14)
-  f.guide:SetText("Guide me")
+  f.guide:SetText(L["Guide me"])
   f.guide:SetScript("OnClick", function() ns.Waypoint.GuideTo(ns.Progress.Current()) end)
 
   UI.RestorePosition()
@@ -177,8 +178,8 @@ function UI.Refresh()
   local f = UI.frame
   if not f then return end
 
-  f.reset:SetText("Daily reset: " .. UI.Dur(ns.Progress.SecondsUntilDaily())
-    .. "   " .. GREY .. "•|r   Weekly: " .. UI.Dur(ns.Progress.SecondsUntilWeekly()))
+  f.reset:SetText(string.format(L["Daily reset: %s"], UI.Dur(ns.Progress.SecondsUntilDaily()))
+    .. "   " .. GREY .. "•|r   " .. string.format(L["Weekly: %s"], UI.Dur(ns.Progress.SecondsUntilWeekly())))
 
   local active = ns.Progress.Active()
   local n = #active
@@ -188,9 +189,9 @@ function UI.Refresh()
 
   if not cur then
     if total == 0 then
-      f.header:SetText("|cff40ff40Grats! All farmable mounts collected.|r")
+      f.header:SetText("|cff40ff40" .. L["Grats! All farmable mounts collected."] .. "|r")
     else
-      f.header:SetText("Nothing to farm this reset — come back after reset.")
+      f.header:SetText(L["Nothing to farm this reset — come back after reset."])
     end
     f.trail:SetText("")
     f.target:SetText("")
@@ -199,13 +200,14 @@ function UI.Refresh()
     return
   end
 
-  f.header:SetText(string.format("Step %d / %d   %s•|r   %d mounts left", idx, n, GREY, total))
+  f.header:SetText(string.format(L["Step %d / %d"], idx, n)
+    .. "   " .. GREY .. "•|r   " .. string.format(L["%d mounts left"], total))
 
   -- breadcrumb
   local parts = {}
   for _, e in ipairs(cur.breadcrumb or {}) do parts[#parts + 1] = e.label end
   if #parts > 0 then
-    f.trail:SetText("Route:  " .. table.concat(parts, "  " .. GREY .. ">|r  "))
+    f.trail:SetText(L["Route:"] .. "  " .. table.concat(parts, "  " .. GREY .. ">|r  "))
   else
     f.trail:SetText("")
   end
@@ -228,7 +230,7 @@ function UI.Refresh()
   end
   for i = shown + 1, #UI.rows do UI.rows[i]:Hide() end
   if #cur.bosses > MAX_ROWS then
-    UI.rows[MAX_ROWS].note:SetText("(+" .. (#cur.bosses - MAX_ROWS) .. " more mounts here)")
+    UI.rows[MAX_ROWS].note:SetText(string.format(L["(+%d more mounts here)"], #cur.bosses - MAX_ROWS))
   end
 
   -- buttons
@@ -281,7 +283,7 @@ function UI.ShowLootPopup(name, icon)
     UI.popup = p
   end
   p.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-  p.text:SetText("|cff40ff40Mount obtained!|r\n" .. (name or ""))
+  p.text:SetText("|cff40ff40" .. L["Mount obtained!"] .. "|r\n" .. (name or ""))
   p:Show()
   if p.timer then p.timer:Cancel() end
   p.timer = C_Timer.NewTimer(7, function() p:Hide() end)

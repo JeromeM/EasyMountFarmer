@@ -4,16 +4,13 @@
 local ADDON, ns = ...
 ns.Waypoint = ns.Waypoint or {}
 local Waypoint = ns.Waypoint
-
-local function warn(msg)
-  print("|cffffd200Mount Roadmap|r: " .. msg)
-end
+local L = ns.L
 
 function Waypoint.GuideTo(target)
   if not target then return end
   local l = (MountRoadmapLocations or {})[target.key]
   if not l or not l.map or not l.x or not l.y then
-    warn("no coordinates for \"" .. (target.title or "?") .. "\" (fill them in Locations.lua).")
+    ns.Print(string.format(L["No coordinates for \"%s\" (fill them in Locations.lua)."], target.title or "?"))
     return
   end
 
@@ -32,7 +29,7 @@ function Waypoint.GuideTo(target)
   -- Fallback: Blizzard user waypoint
   if C_Map and C_Map.SetUserWaypoint and UiMapPoint and UiMapPoint.CreateFromCoordinates then
     if C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(l.map) then
-      warn("cannot place a waypoint on that map from here.")
+      ns.Print(L["Cannot place a waypoint on that map from here."])
       return
     end
     C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(l.map, l.x / 100, l.y / 100))
@@ -42,5 +39,5 @@ function Waypoint.GuideTo(target)
     return
   end
 
-  warn("no waypoint system available.")
+  ns.Print(L["No waypoint system available."])
 end
