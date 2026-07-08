@@ -19,6 +19,7 @@ SAMountsLocations = {
   ["Run Vortex Pinnacle (Dungeon)"] = {
     map = 249, x = 76.6, y = 84.3,   -- Uldum
     lockout = "The Vortex Pinnacle",
+    instanceId = 657,
     reqDiff = nil, diffScope = "dungeon",  -- drops on Normal or Heroic
     encounters = { [88742] = 1041 },  -- Altairus -> Drake of the North Wind
   },
@@ -74,6 +75,7 @@ SAMountsLocations = {
   ["Run Utgarde Pinnacle (Dungeon)"] = {
     map = 117, x = 57.3, y = 46.7,   -- Howling Fjord (Utgarde Keep)
     lockout = "Utgarde Pinnacle",
+    instanceId = 575,
     reqDiff = 2, diffScope = "dungeon",  -- Heroic only
     encounters = { [59996] = 2029 },  -- Skadi the Ruthless -> Blue Proto-Drake
   },
@@ -94,6 +96,7 @@ SAMountsLocations = {
   ["Run Culling of Stratholme (Dungeon)"] = {
     map = 75, x = 57.8, y = 82.8,   -- Caverns of Time -- unsure (Tanaris 71 ~64,50)
     lockout = "The Culling of Stratholme",
+    instanceId = 595,
     reqDiff = 2, diffScope = "dungeon",  -- Heroic only, timed
     encounters = {},  -- Bronze Drake from Infinite Corruptor (timed mob, no DungeonEncounterID)
   },
@@ -107,12 +110,14 @@ SAMountsLocations = {
   ["Run Stonecore (Dungeon)"] = {
     map = 207, x = 47.0, y = 52.0,   -- Deepholm
     lockout = "The Stonecore",
+    instanceId = 725,
     reqDiff = nil, diffScope = "dungeon",  -- drops on Normal or Heroic
     encounters = { [88746] = 1059 },  -- Slabhide -> Vitreous Stone Drake
   },
   ["Run Sethekk Halls (Dungeon)"] = {
     map = 108, x = 43.3, y = 65.4,   -- Terokkar Forest (Auchindoun)
     lockout = "Sethekk Halls",  -- unsure: DB2 map name is "Auchindoun: Sethekk Halls"
+    instanceId = 556,
     reqDiff = 2, diffScope = "dungeon",  -- Heroic only
     encounters = { [41252] = 1904 },  -- Anzu -> Raven Lord
   },
@@ -126,18 +131,21 @@ SAMountsLocations = {
   ["Run Magister's Terrace (Dungeon)"] = {
     map = 122, x = 61.4, y = 28.8,   -- Isle of Quel'Danas -- unsure (12.x may revamp zone)
     lockout = "Magisters' Terrace",
+    instanceId = 585,
     reqDiff = 2, diffScope = "dungeon",  -- Heroic only
     encounters = { [46628] = 1894 },  -- Kael'thas Sunstrider -> Swift White Hawkstrider
   },
   ["Run Zul'Aman (Dungeon)"] = {
     map = 95, x = 81.0, y = 65.0,   -- Ghostlands
     lockout = "Zul'Aman",
+    instanceId = 568,
     reqDiff = nil, diffScope = "dungeon",  -- Amani Battle Bear = timed reward
     encounters = {},  -- timed-chest reward, no ENCOUNTER_END
   },
   ["Run Stratholme (Dungeon)"] = {
     map = 23, x = 27.1, y = 11.6,   -- Eastern Plaguelands (main gate)
     lockout = "Stratholme",
+    instanceId = 329,
     reqDiff = nil, diffScope = "dungeon",
     encounters = { [17481] = 484 },  -- Baron Rivendare -> Deathcharger's Reins
   },
@@ -157,6 +165,7 @@ SAMountsLocations = {
   ["Run Zul'Gurub (Dungeon)"] = {
     map = 50, x = 68.4, y = 33.0,   -- Northern Stranglethorn
     lockout = "Zul'Gurub",
+    instanceId = 859,
     reqDiff = 2, diffScope = "dungeon",  -- Heroic only
     encounters = { [96499] = 1180, [96491] = 1179 },  -- Kilnara -> Panther ; Mandokir -> Razzashi Raptor
   },
