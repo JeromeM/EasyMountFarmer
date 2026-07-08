@@ -19,6 +19,7 @@ local function onLogin()
   ns.UI.Init()
   ns.Minimap.Init()
   ns.Progress.CheckResets()   -- builds targets, prunes stale, refreshes UI
+  ns.Progress.ResetPointer()  -- each session starts on the first step still to do
 end
 
 -- --- events ---------------------------------------------------------------
