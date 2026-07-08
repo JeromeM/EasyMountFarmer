@@ -30,6 +30,19 @@ function Progress.SecondsUntilWeekly()
   return WEEK
 end
 
+-- Is this run already completed this reset according to its weekly/daily
+-- tracking quest (world bosses, and anything with a questId in Locations)?
+-- Checked live so it clears itself automatically at reset.
+function Progress.IsDoneByQuest(key)
+  local l = (SAMountsLocations or {})[key]
+  local q = l and l.questId
+  if not q then return false end
+  if C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
+    return C_QuestLog.IsQuestFlaggedCompleted(q)
+  end
+  return false
+end
+
 -- Is a doneRun still valid (not yet reset)?
 function Progress.IsDoneValid(entry)
   if not entry or not entry.at then return false end
@@ -66,7 +79,8 @@ function Progress.Rebuild(resetPointer)
   local active = {}
   for _, t in ipairs(ns.allTargets) do
     local d = ns.charDB.doneRuns[t.key]
-    if not (d and Progress.IsDoneValid(d)) then
+    local done = Progress.IsDoneByQuest(t.key) or (d and Progress.IsDoneValid(d))
+    if not done then
       active[#active + 1] = t
     end
   end

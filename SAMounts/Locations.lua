@@ -150,19 +150,19 @@ SAMountsLocations = {
   },
   ["Kill Galleon (World Boss)"] = {
     map = 376, x = 71.6, y = 64.4,   -- Valley of the Four Winds (roams)
-    lockout = nil,
+    lockout = nil, questId = 32098,  -- weekly loot-lock quest
     reqDiff = nil, diffScope = nil,
     encounters = {},  -- world boss
   },
   ["Kill Sha of Anger (World Boss)"] = {
     map = 379, x = 53.6, y = 64.8,   -- Kun-Lai Summit (roams)
-    lockout = nil,
+    lockout = nil, questId = 32099,  -- weekly loot-lock quest
     reqDiff = nil, diffScope = nil,
     encounters = {},  -- world boss
   },
   ["Kill Oondasta (World Boss)"] = {
     map = 507, x = 49.0, y = 55.0,   -- Isle of Giants
-    lockout = nil,
+    lockout = nil, questId = 32519,  -- weekly loot-lock quest
     reqDiff = nil, diffScope = nil,
     encounters = {},  -- world boss
   },
@@ -174,7 +174,7 @@ SAMountsLocations = {
   },
   ["Kill Nalak (World Boss)"] = {
     map = 504, x = 60.3, y = 37.4,   -- Isle of Thunder
-    lockout = nil,
+    lockout = nil, questId = 32518,  -- weekly loot-lock quest
     reqDiff = nil, diffScope = nil,
     encounters = {},  -- world boss
   },
@@ -192,7 +192,7 @@ SAMountsLocations = {
   },
   ["Kill Rukhmar (World Boss)"] = {
     map = 542, x = 34.1, y = 35.8,   -- Spires of Arak (circles Skyreach) -- unsure
-    lockout = nil,
+    lockout = nil, questId = 37464,  -- weekly loot-lock quest
     reqDiff = nil, diffScope = nil,
     encounters = {},  -- world boss
   },

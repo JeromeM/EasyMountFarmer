@@ -17,6 +17,8 @@ L["(+%d more mounts here)"] = "(+%d more mounts here)"
 L["< Prev"] = "< Prev"
 L["Next >"] = "Next >"
 L["Guide me"] = "Guide me"
+L["Done"] = "Done"
+L["Mark as done until the next reset"] = "Mark as done until the next reset"
 L["Mount obtained!"] = "Mount obtained!"
 
 -- breadcrumb
@@ -55,3 +57,4 @@ L["/sam next | prev — navigate steps"] = "/sam next | prev — navigate steps"
 L["/sam guide — set a waypoint to the current step"] = "/sam guide — set a waypoint to the current step"
 L["/sam reset — clear this-reset progress"] = "/sam reset — clear this-reset progress"
 L["/sam minimap — toggle the minimap button"] = "/sam minimap — toggle the minimap button"
+L["/sam debug — show saved-instance diagnostics"] = "/sam debug — show saved-instance diagnostics"

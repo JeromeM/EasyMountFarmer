@@ -26,6 +26,7 @@ local f = CreateFrame("Frame")
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
+f:RegisterEvent("QUEST_TURNED_IN")
 f:SetScript("OnEvent", function(_, event, arg1)
   if event == "ADDON_LOADED" then
     if arg1 == ADDON then initSavedVars() end
@@ -33,6 +34,9 @@ f:SetScript("OnEvent", function(_, event, arg1)
     onLogin()
   elseif event == "PLAYER_ENTERING_WORLD" then
     if ns.charDB then ns.Progress.CheckResets() end
+  elseif event == "QUEST_TURNED_IN" then
+    -- a weekly/daily tracking quest may have completed (e.g. world boss)
+    if ns.charDB then ns.Progress.Rebuild() end
   end
 end)
 
@@ -60,6 +64,21 @@ SlashCmdList.SAMOUNTS = function(msg)
     if ns.Minimap.button then
       ns.Minimap.button:SetShown(not ns.db.minimap.hide)
     end
+  elseif msg == "debug" then
+    -- diagnostics: what the client actually reports as saved instances
+    RequestRaidInfo()
+    ns.Print("client locale: " .. GetLocale())
+    ns.Print("saved instances (" .. GetNumSavedInstances() .. "):")
+    for i = 1, GetNumSavedInstances() do
+      local name, _, reset, diff, locked = GetSavedInstanceInfo(i)
+      print(string.format("  |cffffff00%s|r  locked=%s reset=%s diffID=%s", tostring(name), tostring(locked), tostring(reset), tostring(diff)))
+    end
+    local cur = ns.Progress.Current()
+    if cur then
+      local l = (SAMountsLocations or {})[cur.key]
+      ns.Print("current step: " .. tostring(cur.key))
+      print("  expected lockout string = |cffffff00" .. tostring(l and l.lockout) .. "|r (must match a name above to auto-skip)")
+    end
   elseif msg == "help" then
     ns.Print(L["Commands:"])
     print("  " .. L["/sam — open/close the window"])
@@ -67,6 +86,7 @@ SlashCmdList.SAMOUNTS = function(msg)
     print("  " .. L["/sam guide — set a waypoint to the current step"])
     print("  " .. L["/sam reset — clear this-reset progress"])
     print("  " .. L["/sam minimap — toggle the minimap button"])
+    print("  " .. L["/sam debug — show saved-instance diagnostics"])
   else
     ns.UI.Toggle()
   end

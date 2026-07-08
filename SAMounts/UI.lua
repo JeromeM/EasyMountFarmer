@@ -152,23 +152,40 @@ function UI.Init()
   f.diff:Hide()
 
   -- bottom buttons
+  local BW = 84
   f.prev = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  f.prev:SetSize(92, 22)
-  f.prev:SetPoint("BOTTOMLEFT", 16, 14)
+  f.prev:SetSize(BW, 22)
+  f.prev:SetPoint("BOTTOMLEFT", 14, 14)
   f.prev:SetText(L["< Prev"])
   f.prev:SetScript("OnClick", function() ns.Progress.Prev() end)
 
   f.next = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  f.next:SetSize(92, 22)
-  f.next:SetPoint("LEFT", f.prev, "RIGHT", 6, 0)
+  f.next:SetSize(BW, 22)
+  f.next:SetPoint("LEFT", f.prev, "RIGHT", 4, 0)
   f.next:SetText(L["Next >"])
   f.next:SetScript("OnClick", function() ns.Progress.Next() end)
 
   f.guide = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  f.guide:SetSize(110, 22)
-  f.guide:SetPoint("BOTTOMRIGHT", -16, 14)
+  f.guide:SetSize(BW, 22)
+  f.guide:SetPoint("LEFT", f.next, "RIGHT", 4, 0)
   f.guide:SetText(L["Guide me"])
   f.guide:SetScript("OnClick", function() ns.Waypoint.GuideTo(ns.Progress.Current()) end)
+
+  -- manual "done this reset" (locale-proof fallback for anything auto-detect misses)
+  f.done = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  f.done:SetSize(BW, 22)
+  f.done:SetPoint("LEFT", f.guide, "RIGHT", 4, 0)
+  f.done:SetText(L["Done"])
+  f.done:SetScript("OnClick", function()
+    local cur = ns.Progress.Current()
+    if cur then ns.Progress.MarkDone(cur.key, cur.type) end
+  end)
+  f.done:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText(L["Mark as done until the next reset"])
+    GameTooltip:Show()
+  end)
+  f.done:SetScript("OnLeave", GameTooltip_Hide)
 
   UI.RestorePosition()
 end
@@ -196,7 +213,7 @@ function UI.Refresh()
     f.trail:SetText("")
     f.target:SetText("")
     for _, row in ipairs(UI.rows) do row:Hide() end
-    f.prev:Disable(); f.next:Disable(); f.guide:Disable(); f.diff:Hide()
+    f.prev:Disable(); f.next:Disable(); f.guide:Disable(); f.done:Disable(); f.diff:Hide()
     return
   end
 
@@ -237,6 +254,7 @@ function UI.Refresh()
   if idx > 1 then f.prev:Enable() else f.prev:Disable() end
   if idx < n then f.next:Enable() else f.next:Disable() end
   f.guide:Enable()
+  f.done:Enable()
 
   if ns.Difficulty.NeedsSwitch(cur) then
     f.diff:SetText(ns.Difficulty.SwitchLabel(cur))
