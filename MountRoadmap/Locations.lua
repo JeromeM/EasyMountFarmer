@@ -9,489 +9,341 @@
 --   reqDiff     : difficultyID required for the mount to drop (nil = any)
 --   diffScope   : "dungeon" | "raid" | "legacyRaid"
 --                 dungeon 1=N 2=H 23=M ; raid 14=N 15=H 16=M 17=LFR ; legacy 3=10N 4=25N 5=10H 6=25H
---   encounters  : [mount spellId] = encounterID  (from ENCOUNTER_END; /dump prints it on a kill)
+--   encounters  : [mount spellId] = encounterID  (DungeonEncounterID = ENCOUNTER_END first arg)
 --
--- The entries below with real values are EXAMPLES — verify coords/encounterIDs in game.
+-- Values compiled from the DB2 DungeonEncounter/UiMap/Map tables (wago.tools) and warcraft.wiki.gg.
+-- Coordinates are entrance-portal estimates (0-100); a few are marked "-- unsure". World bosses have
+-- no ENCOUNTER_END and are not in GetSavedInstanceInfo, so lockout=nil and encounters={} for them.
 
 MountRoadmapLocations = {
   ["Run Vortex Pinnacle (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Altairus" -> Drake of the North Wind (spellId 88742)  note: You can run Heroic once per day and up to 10x Normal an hour
-    map = 249, x = 76.5, y = 84.0,        -- Uldum (EXAMPLE, verify)
+    map = 249, x = 76.6, y = 84.3,   -- Uldum
     lockout = "The Vortex Pinnacle",
-    reqDiff = nil, diffScope = "dungeon", -- drops on Normal or Heroic
-    encounters = {},                      -- TODO [88742] = <Altairus encounterID>
+    reqDiff = nil, diffScope = "dungeon",  -- drops on Normal or Heroic
+    encounters = { [88742] = 1041 },  -- Altairus -> Drake of the North Wind
   },
   ["Run Throne of the Four Winds (Raid)"] = {
-    -- type = Raid
-    -- boss "Al'akir" -> Drake of the South Wind (spellId 88744)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 249, x = 38.4, y = 80.6,   -- Uldum
+    lockout = "Throne of the Four Winds",
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = { [88744] = 1034 },  -- Al'Akir -> Drake of the South Wind
   },
   ["Run Ahn'Qiraj (Raid)"] = {
-    -- type = Raid
-    -- boss "Trash" -> Blue Qiraji Crystal (spellId 25953)
-    -- boss "Trash" -> Green Qiraji Crystal (spellId 26056)
-    -- boss "Trash" -> Yellow Qiraji Crystal (spellId 26055)
-    -- boss "Trash" -> Red Qiraji Crystal (spellId 26054)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 81, x = 27.1, y = 93.6,   -- Silithus (Gates of Ahn'Qiraj) -- unsure coords
+    lockout = "Ahn'Qiraj Temple",
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = {},  -- Qiraji crystals drop from trash, no ENCOUNTER_END
   },
   ["Run Onyxia (Raid)"] = {
-    -- type = Raid
-    -- boss "Onyxia" -> Onyxian Drake (spellId 69395)
-    map = 70, x = 52.0, y = 76.0,         -- Dustwallow Marsh (EXAMPLE, verify)
+    map = 70, x = 52.5, y = 76.5,   -- Dustwallow Marsh (Wyrmbog)
     lockout = "Onyxia's Lair",
-    reqDiff = nil, diffScope = "legacyRaid", -- 10 or 25
-    encounters = {},                      -- TODO [69395] = <Onyxia encounterID>
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = { [69395] = 1084 },  -- Onyxia
   },
   ["Run Icecrown Citadel (Raid)"] = {
-    -- type = Raid
-    -- boss "The Lich King" -> Invincible's Reins (spellId 72286)  note: Heroic 25 only
-    map = 118, x = 53.9, y = 87.3,        -- Icecrown (EXAMPLE, verify)
+    map = 118, x = 53.6, y = 87.2,   -- Icecrown
     lockout = "Icecrown Citadel",
-    reqDiff = 6, diffScope = "legacyRaid", -- 25 Player Heroic
-    encounters = {},                      -- TODO [72286] = <The Lich King encounterID>
+    reqDiff = 6, diffScope = "legacyRaid",  -- 25 Player Heroic
+    encounters = { [72286] = 1106 },  -- The Lich King -> Invincible's Reins
   },
   ["Run Vault of Archavon (Raid)"] = {
-    -- type = Raid
-    -- boss "Koralon" -> Grand Black War Mammoth (spellId NaN)
-    -- boss "Toravon" -> Grand Black War Mammoth (spellId NaN)
-    -- boss "Archavon" -> Grand Black War Mammoth (spellId NaN)
-    -- boss "Emalon" -> Grand Black War Mammoth (spellId NaN)
-    -- boss "Koralon" -> Grand Black War Mammoth (spellId NaN)
-    -- boss "Toravon" -> Grand Black War Mammoth (spellId NaN)
-    -- boss "Archavon" -> Grand Black War Mammoth (spellId NaN)
-    -- boss "Emalon" -> Grand Black War Mammoth (spellId NaN)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 123, x = 50.0, y = 15.0,   -- Wintergrasp -- unsure coords
+    lockout = "Vault of Archavon",
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = {},  -- Grand Black War Mammoth has no mount spellId; bosses 1126/1127/1128/1129
   },
   ["Run Eye of Eternity (Raid)"] = {
-    -- type = Raid
-    -- boss "Malygos" -> Azure Drake (spellId 59567)
-    -- boss "Malygos" -> Blue Drake (spellId 59568)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 114, x = 27.6, y = 26.6,   -- Borean Tundra (Coldarra)
+    lockout = "The Eye of Eternity",
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = { [59567] = 1094, [59568] = 1094 },  -- Malygos -> Azure Drake / Blue Drake
   },
   ["Run Obsidian Sanctum (Raid)"] = {
-    -- type = Raid
-    -- boss "Sartharion" -> Black Drake (spellId 59650)  note: 10 Man, All Purple Dragons Up
-    -- boss "Sartharion" -> Twilight Drake (spellId 59571)  note: 25 Man, All Purple Dragons Up
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 115, x = 59.3, y = 49.3,   -- Dragonblight (below Wyrmrest Temple)
+    lockout = "The Obsidian Sanctum",
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = { [59650] = 1090, [59571] = 1090 },  -- Sartharion -> Black Drake / Twilight Drake
   },
   ["Run Utgarde Pinnacle (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Skadi" -> Blue Proto-Drake (spellId 59996)  note: Heroic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 117, x = 57.3, y = 46.7,   -- Howling Fjord (Utgarde Keep)
+    lockout = "Utgarde Pinnacle",
+    reqDiff = 2, diffScope = "dungeon",  -- Heroic only
+    encounters = { [59996] = 2029 },  -- Skadi the Ruthless -> Blue Proto-Drake
   },
   ["Run Ulduar (Raid)"] = {
-    -- type = Raid
-    -- boss "Yogg-Saron" -> Mimiron's Head (spellId 63796)  note: Requires no watchers up
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 120, x = 41.0, y = 18.0,   -- The Storm Peaks
+    lockout = "Ulduar",
+    reqDiff = nil, diffScope = "legacyRaid",  -- Mimiron's Head: Yogg-Saron with 0 keepers
+    encounters = { [63796] = 1143 },  -- Yogg-Saron -> Mimiron's Head
   },
   ["Run Firelands on both Normal and Heroic (Raid)"] = {
-    -- type = Raid
-    -- boss "Alysrazor" -> Flametalon of Alysrazor (spellId 101542)
-    -- boss "Ragnaros" -> Egg of Millagazor (spellId 97493)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 198, x = 47.7, y = 78.3,   -- Mount Hyjal (Sulfuron Spire)
+    lockout = "Firelands",
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = { [101542] = 1206, [97493] = 1203 },  -- Alysrazor -> Flametalon ; Ragnaros -> Egg of Millagazor
   },
   ["Run Culling of Stratholme (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Infinite Corruptor" -> Bronze Drake (spellId 59569)  note: Heroic only. Timed run
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 75, x = 57.8, y = 82.8,   -- Caverns of Time -- unsure (Tanaris 71 ~64,50)
+    lockout = "The Culling of Stratholme",
+    reqDiff = 2, diffScope = "dungeon",  -- Heroic only, timed
+    encounters = {},  -- Bronze Drake from Infinite Corruptor (timed mob, no DungeonEncounterID)
   },
   ["Run Dragon Soul (Raid)"] = {
-    -- type = Raid
-    -- boss "Ultraxion" -> Experiment 12-B (spellId 110039)
-    -- boss "Deathwing" -> Blazing Drake (spellId 107842)
-    -- boss "Deathwing" -> Life-Binder's Handmaiden (spellId 107845)  note: Heroic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 75, x = 62.2, y = 28.2,   -- Caverns of Time portal -- unsure (Tanaris 71 ~64,49)
+    lockout = "Dragon Soul",
+    reqDiff = nil, diffScope = "legacyRaid",  -- Life-Binder's Handmaiden (107845) is Heroic-only
+    encounters = { [110039] = 1297, [107842] = 1299, [107845] = 1299 },  -- Ultraxion ; Madness of Deathwing
   },
   ["Run Stonecore (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Slabhide" -> Vitreous Stone Drake (spellId 88746)  note: You can run Heroic once per day and up to 10x Normal an hour
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 207, x = 47.0, y = 52.0,   -- Deepholm
+    lockout = "The Stonecore",
+    reqDiff = nil, diffScope = "dungeon",  -- drops on Normal or Heroic
+    encounters = { [88746] = 1059 },  -- Slabhide -> Vitreous Stone Drake
   },
   ["Run Sethekk Halls (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Anzu" -> Raven Lord (spellId 41252)  note: Heroic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 108, x = 43.3, y = 65.4,   -- Terokkar Forest (Auchindoun)
+    lockout = "Sethekk Halls",  -- unsure: DB2 map name is "Auchindoun: Sethekk Halls"
+    reqDiff = 2, diffScope = "dungeon",  -- Heroic only
+    encounters = { [41252] = 1904 },  -- Anzu -> Raven Lord
   },
   ["Run Tempest Keep (Raid)"] = {
-    -- type = Raid
-    -- boss "Kael'thas" -> Ashes of Al'ar (spellId 40192)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 109, x = 73.5, y = 63.7,   -- Netherstorm
+    lockout = "Tempest Keep",  -- unsure: UI often shows "The Eye"
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = { [40192] = 733 },  -- Kael'thas Sunstrider -> Ashes of Al'ar
   },
   ["Run Magister's Terrace (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Kael'thas" -> Swift White Hawkstrider (spellId 46628)  note: Heroic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 122, x = 61.4, y = 28.8,   -- Isle of Quel'Danas -- unsure (12.x may revamp zone)
+    lockout = "Magisters' Terrace",
+    reqDiff = 2, diffScope = "dungeon",  -- Heroic only
+    encounters = { [46628] = 1894 },  -- Kael'thas Sunstrider -> Swift White Hawkstrider
   },
   ["Run Zul'Aman (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Timed Reward" -> Amani Battle Bear (spellId 98204)  note: Heroic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 95, x = 81.0, y = 65.0,   -- Ghostlands
+    lockout = "Zul'Aman",
+    reqDiff = nil, diffScope = "dungeon",  -- Amani Battle Bear = timed reward
+    encounters = {},  -- timed-chest reward, no ENCOUNTER_END
   },
   ["Run Stratholme (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Rivendare" -> Deathcharger's Reins (spellId 17481)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 23, x = 27.1, y = 11.6,   -- Eastern Plaguelands (main gate)
+    lockout = "Stratholme",
+    reqDiff = nil, diffScope = "dungeon",
+    encounters = { [17481] = 484 },  -- Baron Rivendare -> Deathcharger's Reins
   },
   ["Run Karazhan (Raid)"] = {
-    -- type = Raid
-    -- boss "Attumen" -> Fiery Warhorse's Reins (spellId 36702)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 42, x = 46.8, y = 74.1,   -- Deadwind Pass
+    lockout = "Karazhan",
+    reqDiff = nil, diffScope = "legacyRaid",
+    encounters = { [36702] = 652 },  -- Attumen the Huntsman -> Fiery Warhorse's Reins
   },
   ["Run Return to Karazhan (Dungeon)"] = {
-    -- type = WeeklyDungeon
-    -- boss "Attumen" -> Midnight's Eternal Reins (spellId 229499)  note: Mythic only
-    -- boss "Nightbane" -> Smoldering Ember Wyrm (spellId 231428)  note: Mythic only, Timed Reward
-    map = 42, x = 46.9, y = 74.5,         -- Deadwind Pass (EXAMPLE, verify)
+    map = 42, x = 46.9, y = 74.5,   -- Deadwind Pass
     lockout = "Return to Karazhan",
     reqDiff = 23, diffScope = "dungeon",  -- Mythic only
-    encounters = {},                      -- TODO [229499]/[231428] = <encounterIDs>
+    encounters = {},  -- TODO Attumen (229499) / Nightbane (231428) DungeonEncounterIDs
   },
   ["Run Zul'Gurub (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Kilnara" -> Swift Zulian Panther (spellId 96499)  note: Heroic only
-    -- boss "Mandokir" -> Armored Razzashi Raptor (spellId 96491)  note: Heroic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 50, x = 68.4, y = 33.0,   -- Northern Stranglethorn
+    lockout = "Zul'Gurub",
+    reqDiff = 2, diffScope = "dungeon",  -- Heroic only
+    encounters = { [96499] = 1180, [96491] = 1179 },  -- Kilnara -> Panther ; Mandokir -> Razzashi Raptor
   },
   ["Kill Galleon (World Boss)"] = {
-    -- type = Raid
-    -- boss "Galleon" -> Son of Galleon's Saddle (spellId 130965)  note: Mount is bonus rollable
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 376, x = 71.6, y = 64.4,   -- Valley of the Four Winds (roams)
+    lockout = nil,
+    reqDiff = nil, diffScope = nil,
+    encounters = {},  -- world boss
   },
   ["Kill Sha of Anger (World Boss)"] = {
-    -- type = Raid
-    -- boss "Sha of Anger" -> Reins of the Heavenly Onyx Cloud Serpent (spellId 127158)  note: Mount is bonus rollable
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 379, x = 53.6, y = 64.8,   -- Kun-Lai Summit (roams)
+    lockout = nil,
+    reqDiff = nil, diffScope = nil,
+    encounters = {},  -- world boss
   },
   ["Kill Oondasta (World Boss)"] = {
-    -- type = Raid
-    -- boss "Oondasta" -> Reins of the Cobalt Primordial Direhorn (spellId 138423)  note: Mount is bonus rollable
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 507, x = 49.0, y = 55.0,   -- Isle of Giants
+    lockout = nil,
+    reqDiff = nil, diffScope = nil,
+    encounters = {},  -- world boss
   },
   ["Run Mogu'shan Vaults (Raid)"] = {
-    -- type = Raid
-    -- boss "Elegon" -> Reins of the Astral Cloud Serpent (spellId 127170)
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 379, x = 59.2, y = 39.6,   -- Kun-Lai Summit (Mogu'shan Terrace)
+    lockout = "Mogu'shan Vaults",
+    reqDiff = nil, diffScope = "raid",
+    encounters = { [127170] = 1500 },  -- Elegon -> Reins of the Astral Cloud Serpent
   },
   ["Kill Nalak (World Boss)"] = {
-    -- type = Raid
-    -- boss "Nalak" -> Reins of the Thundering Cobalt Cloud Serpent (spellId 139442)  note: Mount is bonus rollable
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 504, x = 60.3, y = 37.4,   -- Isle of Thunder
+    lockout = nil,
+    reqDiff = nil, diffScope = nil,
+    encounters = {},  -- world boss
   },
   ["Run Throne of Thunder (Raid)"] = {
-    -- type = Raid
-    -- boss "Horridon" -> Spawn of Horridon (spellId 136471)  note: Normal/Heroic
-    -- boss "Ji-Kun" -> Clutch of Ji-Kun (spellId 139448)  note: Normal/Heroic
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 504, x = 63.7, y = 32.2,   -- Isle of Thunder
+    lockout = "Throne of Thunder",
+    reqDiff = nil, diffScope = "raid",
+    encounters = { [136471] = 1575, [139448] = 1573 },  -- Horridon -> Spawn ; Ji-Kun -> Clutch
   },
   ["Run Siege of Orgrimmar (Raid)"] = {
-    -- type = Raid
-    -- boss "Garrosh Hellscream" -> Kor'kron Juggernaut (spellId 148417)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 1530, x = 74.0, y = 42.0,   -- Vale of Eternal Blossoms (retail 12.x)
+    lockout = "Siege of Orgrimmar",
+    reqDiff = 16, diffScope = "raid",  -- Mythic only
+    encounters = { [148417] = 1623 },  -- Garrosh Hellscream -> Kor'kron Juggernaut
   },
   ["Kill Rukhmar (World Boss)"] = {
-    -- type = Raid
-    -- boss "Rukhmar" -> Solar Spirehawk (spellId 171828)  note: Mount is NOT bonus rollable
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 542, x = 34.1, y = 35.8,   -- Spires of Arak (circles Skyreach) -- unsure
+    lockout = nil,
+    reqDiff = nil, diffScope = nil,
+    encounters = {},  -- world boss
   },
   ["Run Hellfire Citadel (Raid)"] = {
-    -- type = Raid
-    -- boss "Archimonde" -> Felsteel Annihilator (spellId 182912)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 534, x = 53.5, y = 58.1,   -- Tanaan Jungle
+    lockout = "Hellfire Citadel",
+    reqDiff = 16, diffScope = "raid",  -- Mythic only
+    encounters = { [182912] = 1799 },  -- Archimonde -> Felsteel Annihilator
   },
   ["Run Blackrock Foundry (Raid)"] = {
-    -- type = Raid
-    -- boss "Blackhand" -> Ironhoof Destroyer (spellId 171621)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 543, x = 51.7, y = 29.0,   -- Gorgrond
+    lockout = "Blackrock Foundry",
+    reqDiff = 16, diffScope = "raid",  -- Mythic only
+    encounters = { [171621] = 1704 },  -- Blackhand -> Ironhoof Destroyer
   },
   ["Run Nighthold (Raid)"] = {
-    -- type = Raid
-    -- boss "Gul'dan" -> Living Infernal Core (spellId 213134)  note: Normal/Heroic/Mythic.
-    -- boss "Gul'dan" -> Fiendish Hellfire Core (spellId 171827)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 680, x = 45.8, y = 64.5,   -- Suramar
+    lockout = "The Nighthold",
+    reqDiff = nil, diffScope = "raid",  -- Fiendish Hellfire Core (171827) is Mythic only
+    encounters = { [213134] = 1866, [171827] = 1866 },  -- Gul'dan (both mounts)
   },
   ["Run Tomb of Sargeras (Raid)"] = {
-    -- type = Raid
-    -- boss "Mistress Sassz'ine" -> Abyss Worm (spellId 232519)  note: LFR/Normal/Heroic/Mythic
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 646, x = 63.6, y = 21.8,   -- Broken Shore
+    lockout = "Tomb of Sargeras",
+    reqDiff = nil, diffScope = "raid",
+    encounters = { [232519] = 2037 },  -- Mistress Sassz'ine -> Abyss Worm
   },
   ["Run Antorus, the Burning Throne (Raid)"] = {
-    -- type = Raid
-    -- boss "Felhounds of Sargeras" -> Antoran Charhound (spellId 253088)  note: LFR/Normal/Heroic/Mythic
-    -- boss "Argus the Unmaker" -> Shackled Ur'zul (spellId 243651)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 885, x = 50.0, y = 70.0,   -- Antoran Wastes
+    lockout = "Antorus, the Burning Throne",
+    reqDiff = nil, diffScope = "raid",  -- Shackled Ur'zul (243651) is Mythic only
+    encounters = { [253088] = 2074, [243651] = 2092 },  -- Felhounds ; Argus the Unmaker
   },
   ["Run Battle of Dazar'alor (Raid)"] = {
-    -- type = Raid
-    -- boss "High Tinker Mekkatorque" -> G.M.O.D. (spellId 289083)  note: LFR (Jaina)/Normal/Heroic/Mythic
-    -- boss "Jaina Proudmoore" -> Glacial Tidestorm (spellId 289555)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 1165, x = 38.8, y = 2.4,   -- Dazar'alor (Horde); Alliance = Boralus (1161) ~70.5,35.3
+    lockout = "Battle of Dazar'alor",
+    reqDiff = nil, diffScope = "raid",  -- Glacial Tidestorm (289555) is Mythic only
+    encounters = { [289083] = 2276, [289555] = 2281 },  -- Mekkatorque ; Jaina Proudmoore
   },
   ["Run Freehold (Dungeon)"] = {
-    -- type = WeeklyDungeon
-    -- boss "Harlan Sweete" -> Sharkbait's Favorite Crackers (spellId 254813)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 895, x = 84.1, y = 79.2,   -- Tiragarde Sound (Castaway Point)
+    lockout = "Freehold",
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [254813] = 2096 },  -- Harlan Sweete -> Sharkbait's Favorite Crackers
   },
   ["Run King's Rest (Dungeon)"] = {
-    -- type = WeeklyDungeon
-    -- boss "Dazar, The First King" -> Mummified Raptor Skull (spellId 266058)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 862, x = 37.0, y = 39.0,   -- Zuldazar
+    lockout = "Kings' Rest",  -- in-game name uses "Kings'"
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [266058] = 2143 },  -- Dazar, The First King -> Mummified Raptor Skull
   },
   ["Run The Underrot (Dungeon)"] = {
-    -- type = WeeklyDungeon
-    -- boss "Unbound Abomination" -> Underrot Crawg Harness (spellId 273541)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 863, x = 51.6, y = 65.3,   -- Nazmir
+    lockout = "The Underrot",
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [273541] = 2123 },  -- Unbound Abomination -> Underrot Crawg Harness
   },
   ["Run Mechagon: Junkyard (Dungeon)"] = {
-    -- type = WeeklyDungeon
-    -- boss "HK-8 Aerial Oppression Unit" -> Mechagon Peacekeeper (spellId 299158)  note: Mythic only
-    -- boss "King Mechagon" -> Aerial Unit R-21/X (spellId 290718)  note: Hardmode only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 1462, x = 73.1, y = 36.3,   -- Mechagon Island (Rustbolt)
+    lockout = "Operation: Mechagon",  -- M+ wings are separate maps
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [299158] = 2291, [290718] = 2260 },  -- HK-8 ; King Mechagon
   },
   ["Run Ny'alotha the Waking City (Raid)"] = {
-    -- type = Raid
-    -- boss "N'zoth the Corruptor" -> Ny'alotha Allseer (spellId 308814)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 1527, x = 55.1, y = 43.8,   -- Uldum (N'Zoth assault); Vale (1530) ~41.6,45.5
+    lockout = "Ny'alotha, the Waking City",
+    reqDiff = 16, diffScope = "raid",  -- Mythic only
+    encounters = { [308814] = 2344 },  -- N'Zoth the Corruptor -> Ny'alotha Allseer
   },
   ["Run Necrotic Wake (Dungeon)"] = {
-    -- type = WeeklyDungeon
-    -- boss "Nalthor the Rimebinder" -> Marrowfang (spellId 336036)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 1533, x = 40.2, y = 55.2,   -- Bastion
+    lockout = "The Necrotic Wake",
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [336036] = 2390 },  -- Nalthor the Rimebinder -> Marrowfang
   },
   ["Run Tazavesh the Veiled Market (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "So'leah" -> Cartel Master's Gearglider (spellId 353263)  note: Heroic (Repeatable)/Mythic
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 1671, x = 63.8, y = 26.6,   -- Oribos (Ring of Transference) -- unsure coords
+    lockout = "Tazavesh, the Veiled Market",
+    reqDiff = nil, diffScope = "dungeon",  -- Heroic (repeatable) or Mythic
+    encounters = { [353263] = 2442 },  -- So'leah -> Cartel Master's Gearglider
   },
   ["Run Sanctum of Domination (Raid)"] = {
-    -- type = Raid
-    -- boss "The Nine" -> Sanctum Gloomcharger (spellId 354351)  note: LFR/Normal/Heroic/Mythic
-    -- boss "Lady Sylvanas Windrunner" -> Vengeance (spellId 351195)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 1543, x = 69.7, y = 31.8,   -- The Maw (Desmotaeron)
+    lockout = "Sanctum of Domination",
+    reqDiff = nil, diffScope = "raid",  -- Vengeance (351195) is Mythic only
+    encounters = { [354351] = 2429, [351195] = 2435 },  -- The Nine ; Sylvanas Windrunner
   },
   ["Run Sepulcher of the First Ones (Raid)"] = {
-    -- type = Raid
-    -- boss "The Jailer" -> Zereth Overseer (spellId 368158)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 1970, x = 80.6, y = 53.4,   -- Zereth Mortis
+    lockout = "Sepulcher of the First Ones",
+    reqDiff = 16, diffScope = "raid",  -- Mythic only
+    encounters = { [368158] = 2537 },  -- The Jailer -> Zereth Overseer
   },
   ["Run Dawn of the Infinites (Dungeon)"] = {
-    -- type = Raid
-    -- boss "Chrono-Lord Deios" -> Deathcharger's Reins (spellId 17481)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Raven Lord (spellId 41252)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Swift White Hawkstrider (spellId 46628)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Blue Proto-Drake (spellId 59996)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Drake of the North Wind (spellId 88742)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Vitreous Stone Drake (spellId 88746)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Armored Razzashi Raptor (spellId 96491)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Swift Zulian Panther (spellId 96499)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Infinite Timereaver (spellId 201098)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Midnight's Eternal Reins (spellId 229499)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Sharkbait's Favorite Crackers (spellId 254813)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Mummified Raptor Skull (spellId 266058)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Underrot Crawg Harness (spellId 273541)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Mechagon Peacekeeper (spellId 299158)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Marrowfang (spellId 336036)  note: Mythic only - from Quantum Courser item
-    -- boss "Chrono-Lord Deios" -> Cartel Master's Gearglider (spellId 353263)  note: Mythic only - from Quantum Courser item
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2025, x = 61.2, y = 84.4,   -- Thaldraszus (Temporal Conflux)
+    lockout = "Dawn of the Infinite",
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = {},  -- drop is the random "Reins of the Quantum Courser" container, no single spellId
   },
   ["Run Amirdrassil, the Dream's Hope (Raid)"] = {
-    -- type = Raid
-    -- boss "Fyrakk" -> Anu'relos, Flame's Guidance (spellId 424484)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2200, x = 27.0, y = 31.0,   -- Emerald Dream
+    lockout = "Amirdrassil, the Dream's Hope",
+    reqDiff = 16, diffScope = "raid",  -- Mythic only
+    encounters = { [424484] = 2677 },  -- Fyrakk the Blazing -> Anu'relos
   },
   ["Run The Stonevault (Dungeon)"] = {
-    -- type = WeeklyDungeon
-    -- boss "Void Speaker Eirich" -> Stonevault Mechsuit (spellId 442358)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2214, x = 42.7, y = 8.6,   -- The Ringing Deeps
+    lockout = "The Stonevault",
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [442358] = 2883 },  -- Void Speaker Eirich -> Stonevault Mechsuit
   },
   ["Run Darkflame Cleft (Dungeon)"] = {
-    -- type = WeeklyDungeon
-    -- boss "The Darkness" -> Wick (spellId 449264)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2214, x = 55.5, y = 21.6,   -- The Ringing Deeps
+    lockout = "Darkflame Cleft",
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [449264] = 2788 },  -- The Darkness -> Wick
   },
   ["Run Nerub-ar Palace (Raid)"] = {
-    -- type = Raid
-    -- boss "Queen Ansurek" -> Sureki Skyrazor (spellId 451486)  note: LFR/Normal/Heroic/Mythic
-    -- boss "Queen Ansurek" -> Ascendant Skyrazor (spellId 451491)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2213, x = 35.3, y = 72.0,   -- City of Threads (Azj-Kahet 2255 ~45.1,90.7)
+    lockout = "Nerub-ar Palace",
+    reqDiff = nil, diffScope = "raid",  -- Ascendant Skyrazor (451491) is Mythic only
+    encounters = { [451486] = 2922, [451491] = 2922 },  -- Queen Ansurek (both mounts)
   },
   ["Run Liberation of Undermine (Raid)"] = {
-    -- type = Raid
-    -- boss "Chrome King Gallywix" -> Prototype A.S.M.R. (spellId 1221155)  note: LFR/Normal/Heroic/Mythic
-    -- boss "Chrome King Gallywix" -> The Big G (spellId 235626)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2346, x = 41.6, y = 48.8,   -- Undermine
+    lockout = "Liberation of Undermine",
+    reqDiff = nil, diffScope = "raid",  -- The Big G (235626) is Mythic only
+    encounters = { [1221155] = 3016, [235626] = 3016 },  -- Chrome King Gallywix (both mounts)
   },
   ["Run Manaforge Omega (Raid)"] = {
-    -- type = Raid
-    -- boss "Dimensius" -> Unbound Star-Eater (spellId 1234573)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2371, x = 42.0, y = 21.5,   -- K'aresh (Shadow Point) -- unsure coords
+    lockout = "Manaforge Omega",
+    reqDiff = 16, diffScope = "raid",  -- Mythic only
+    encounters = { [1234573] = 3135 },  -- Dimensius -> Unbound Star-Eater
   },
   ["Run Magister's Terrace (Midnight Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "Degentrius" -> Lucent Hawkstrider (spellId 1265784)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2424, x = 63.4, y = 15.3,   -- Isle of Quel'Danas (Midnight) -- unsure (preview)
+    lockout = "Magisters' Terrace",
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [1265784] = 3074 },  -- Degentrius -> Lucent Hawkstrider -- unsure (preview)
   },
   ["Run March on Quel'Danas (Raid)"] = {
-    -- type = Raid
-    -- boss "Midnight Falls" -> Ashes of Belo'ren (spellId 1242904)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2424, x = 52.7, y = 84.9,   -- Isle of Quel'Danas (Midnight) -- unsure (preview)
+    lockout = "March on Quel'Danas",
+    reqDiff = 16, diffScope = "raid",  -- Mythic only
+    encounters = { [1242904] = 3182 },  -- -> Ashes of Belo'ren -- unsure (preview)
   },
   ["Run Windrunner Spire (Dungeon)"] = {
-    -- type = Dungeon
-    -- boss "The Restless Heart" -> Spectral Hawkstrider (spellId 1263635)  note: Mythic only
-    map = nil, x = nil, y = nil,          -- TODO instance entrance coords (0-100)
-    lockout = nil,                        -- TODO exact GetSavedInstanceInfo name
-    reqDiff = nil, diffScope = nil,       -- TODO 1/2/23|14/15/16/17|3/4/5/6 ; "dungeon"|"raid"|"legacyRaid"
-    encounters = {},                      -- TODO [spellId] = encounterID
+    map = 2395, x = 35.2, y = 78.4,   -- Eversong Woods (Midnight) -- unsure (preview)
+    lockout = "Windrunner Spire",
+    reqDiff = 23, diffScope = "dungeon",  -- Mythic only
+    encounters = { [1263635] = 3059 },  -- The Restless Heart -> Spectral Hawkstrider -- unsure (preview)
   },
 }
