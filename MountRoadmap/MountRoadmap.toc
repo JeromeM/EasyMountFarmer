@@ -1,0 +1,21 @@
+## Interface: 120007
+## Title: Mount Roadmap
+## Notes: In-game mount farming route, based on SimpleArmory
+## Author: JeromeM
+## Version: 0.1.0
+## SavedVariables: MountRoadmapDB
+## SavedVariablesPerCharacter: MountRoadmapCharDB
+## OptionalDeps: TomTom
+## X-Website: https://simplearmory.com
+
+RouteData.lua
+Locations.lua
+Route.lua
+Progress.lua
+Lockouts.lua
+Difficulty.lua
+Detect.lua
+Waypoint.lua
+UI.lua
+MinimapButton.lua
+Core.lua
