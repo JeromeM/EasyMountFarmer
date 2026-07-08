@@ -1,10 +1,10 @@
 ## Interface: 120007
-## Title: Mount Roadmap
+## Title: SAMounts
 ## Notes: In-game mount farming route, based on SimpleArmory
 ## Author: JeromeM
 ## Version: 0.1.0
-## SavedVariables: MountRoadmapDB
-## SavedVariablesPerCharacter: MountRoadmapCharDB
+## SavedVariables: SAMountsDB
+## SavedVariablesPerCharacter: SAMountsCharDB
 ## OptionalDeps: TomTom
 ## X-Website: https://simplearmory.com
 

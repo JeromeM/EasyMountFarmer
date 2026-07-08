@@ -50,7 +50,7 @@ end
 function UI.Init()
   if UI.frame then return end
 
-  local f = CreateFrame("Frame", "MountRoadmapFrame", UIParent,
+  local f = CreateFrame("Frame", "SAMountsFrame", UIParent,
     BackdropTemplateMixin and "BackdropTemplate" or nil)
   UI.frame = f
   f:SetSize(384, 372)
@@ -68,7 +68,7 @@ function UI.Init()
   -- title
   local title = f:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
   title:SetPoint("TOP", 0, -16)
-  title:SetText(L["Mount Roadmap"])
+  title:SetText(L["SAMounts"])
 
   -- close button
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
@@ -266,7 +266,7 @@ end
 function UI.ShowLootPopup(name, icon)
   local p = UI.popup
   if not p then
-    p = CreateFrame("Frame", "MountRoadmapPopup", UIParent,
+    p = CreateFrame("Frame", "SAMountsPopup", UIParent,
       BackdropTemplateMixin and "BackdropTemplate" or nil)
     p:SetSize(320, 72)
     p:SetPoint("TOP", 0, -200)

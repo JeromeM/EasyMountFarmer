@@ -1,4 +1,4 @@
-# Mount Roadmap
+# SAMounts
 
 Addon World of Warcraft (retail / Midnight, patch 12.x) qui porte **en jeu** le « plan de route » de farm
 de montures de [SimpleArmory](https://simplearmory.com).
@@ -16,10 +16,10 @@ avec :
 
 ## Installation (usage privé)
 
-Copier (ou lier en symlink) le dossier `MountRoadmap/` dans
+Copier (ou lier en symlink) le dossier `SAMounts/` dans
 `World of Warcraft/_retail_/Interface/AddOns/`, puis `/reload` en jeu.
 
-En jeu : `/mr` (ou `/mountroadmap`) ouvre la fenêtre. `/mr next`, `/mr prev`, `/mr guide`, `/mr reset`.
+En jeu : `/sam` (ou `/samounts`) ouvre la fenêtre. `/sam next`, `/sam prev`, `/sam guide`, `/sam reset`.
 
 ## Développement / mise à jour des données
 
@@ -29,8 +29,8 @@ La route provient de `data/planner.json` (snapshot de SimpleArmory). Pour régé
 node scripts/build-data.mjs
 ```
 
-Cela réécrit `MountRoadmap/RouteData.lua` et régénère `scripts/Locations.skeleton.lua`.
-`MountRoadmap/Locations.lua` (coordonnées, lockouts, difficultés, encounterIDs saisis à la main) n'est
+Cela réécrit `SAMounts/RouteData.lua` et régénère `scripts/Locations.skeleton.lua`.
+`SAMounts/Locations.lua` (coordonnées, lockouts, difficultés, encounterIDs saisis à la main) n'est
 **jamais** écrasé par le build.
 
 Pour resynchroniser après une mise à jour du site : recopier `static/data/planner.json` de SimpleArmory
@@ -43,5 +43,5 @@ dans `data/planner.json`, puis relancer le build.
 Tous les textes affichés passent par une table de locale (`ns.L`, mise en place dans `Locale.lua`).
 Seul l'anglais (`Locales/enUS.lua`) est fourni pour l'instant. Pour ajouter une langue : copier
 `Locales/enUS.lua` en `Locales/frFR.lua`, ajouter `if GetLocale() ~= "frFR" then return end` en tête,
-traduire les valeurs, et référencer le fichier dans `MountRoadmap.toc`. Les clés manquantes retombent
+traduire les valeurs, et référencer le fichier dans `SAMounts.toc`. Les clés manquantes retombent
 automatiquement sur le texte anglais (la clé).

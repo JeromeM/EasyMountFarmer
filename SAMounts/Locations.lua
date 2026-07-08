@@ -15,7 +15,7 @@
 -- Coordinates are entrance-portal estimates (0-100); a few are marked "-- unsure". World bosses have
 -- no ENCOUNTER_END and are not in GetSavedInstanceInfo, so lockout=nil and encounters={} for them.
 
-MountRoadmapLocations = {
+SAMountsLocations = {
   ["Run Vortex Pinnacle (Dungeon)"] = {
     map = 249, x = 76.6, y = 84.3,   -- Uldum
     lockout = "The Vortex Pinnacle",

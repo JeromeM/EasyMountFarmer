@@ -8,7 +8,7 @@ local L = ns.L
 
 function Waypoint.GuideTo(target)
   if not target then return end
-  local l = (MountRoadmapLocations or {})[target.key]
+  local l = (SAMountsLocations or {})[target.key]
   if not l or not l.map or not l.x or not l.y then
     ns.Print(string.format(L["No coordinates for \"%s\" (fill them in Locations.lua)."], target.title or "?"))
     return
@@ -18,7 +18,7 @@ function Waypoint.GuideTo(target)
   if TomTom and TomTom.AddWaypoint then
     TomTom:AddWaypoint(l.map, l.x / 100, l.y / 100, {
       title = target.title,
-      from = "Mount Roadmap",
+      from = "SAMounts",
       persistent = false,
       minimap = true,
       world = true,

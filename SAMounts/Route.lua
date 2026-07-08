@@ -1,4 +1,4 @@
--- Route.lua — builds the ordered list of "farm targets" from MountRoadmapRouteData
+-- Route.lua — builds the ordered list of "farm targets" from SAMountsRouteData
 -- (generated from planner.json), pruning mounts already collected and mounts for
 -- the wrong faction.
 
@@ -35,7 +35,7 @@ local function BuildRouteMountSet()
       if step.steps then walk(step.steps) end
     end
   end
-  if MountRoadmapRouteData then walk(MountRoadmapRouteData) end
+  if SAMountsRouteData then walk(SAMountsRouteData) end
 end
 
 function Route.IsRouteMount(mountID)
@@ -98,7 +98,7 @@ function Route.BuildTargets()
     end
   end
 
-  if MountRoadmapRouteData then walk(MountRoadmapRouteData, {}) end
+  if SAMountsRouteData then walk(SAMountsRouteData, {}) end
   return targets
 end
 

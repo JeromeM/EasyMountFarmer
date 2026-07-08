@@ -18,7 +18,7 @@ function Minimap.Init()
   if Minimap.button then return end
   ns.db.minimap = ns.db.minimap or {}
 
-  local btn = CreateFrame("Button", "MountRoadmapMinimapButton", _G.Minimap)
+  local btn = CreateFrame("Button", "SAMountsMinimapButton", _G.Minimap)
   Minimap.button = btn
   btn:SetSize(31, 31)
   btn:SetFrameStrata("MEDIUM")
@@ -60,7 +60,7 @@ function Minimap.Init()
 
   btn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:AddLine(L["Mount Roadmap"])
+    GameTooltip:AddLine(L["SAMounts"])
     GameTooltip:AddLine(L["Left-click: open/close"], 1, 1, 1)
     GameTooltip:AddLine(L["Right-click: reset this-reset progress"], 1, 1, 1)
     GameTooltip:Show()

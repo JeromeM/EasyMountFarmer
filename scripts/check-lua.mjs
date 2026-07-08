@@ -1,4 +1,4 @@
-// check-lua.mjs — parse every .lua file under MountRoadmap/ with luaparse to
+// check-lua.mjs — parse every .lua file under SAMounts/ with luaparse to
 // catch syntax errors (WoW uses a Lua 5.1 dialect).
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -6,7 +6,7 @@ import { dirname, join, relative } from 'node:path';
 import luaparse from 'luaparse';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DIR = join(__dirname, '..', 'MountRoadmap');
+const DIR = join(__dirname, '..', 'SAMounts');
 
 function walk(dir) {
   const out = [];

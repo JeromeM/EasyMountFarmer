@@ -5,7 +5,7 @@ local ADDON, ns = ...
 local L = ns.L
 
 -- window / general
-L["Mount Roadmap"] = "Mount Roadmap"
+L["SAMounts"] = "SAMounts"
 L["Grats! All farmable mounts collected."] = "Grats! All farmable mounts collected."
 L["Nothing to farm this reset — come back after reset."] = "Nothing to farm this reset — come back after reset."
 L["Step %d / %d"] = "Step %d / %d"
@@ -50,8 +50,8 @@ L["Left-click: open/close"] = "Left-click: open/close"
 L["Right-click: reset this-reset progress"] = "Right-click: reset this-reset progress"
 L["Per-reset progress cleared."] = "Per-reset progress cleared."
 L["Commands:"] = "Commands:"
-L["/mr — open/close the window"] = "/mr — open/close the window"
-L["/mr next | prev — navigate steps"] = "/mr next | prev — navigate steps"
-L["/mr guide — set a waypoint to the current step"] = "/mr guide — set a waypoint to the current step"
-L["/mr reset — clear this-reset progress"] = "/mr reset — clear this-reset progress"
-L["/mr minimap — toggle the minimap button"] = "/mr minimap — toggle the minimap button"
+L["/sam — open/close the window"] = "/sam — open/close the window"
+L["/sam next | prev — navigate steps"] = "/sam next | prev — navigate steps"
+L["/sam guide — set a waypoint to the current step"] = "/sam guide — set a waypoint to the current step"
+L["/sam reset — clear this-reset progress"] = "/sam reset — clear this-reset progress"
+L["/sam minimap — toggle the minimap button"] = "/sam minimap — toggle the minimap button"

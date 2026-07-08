@@ -5,10 +5,10 @@ local ADDON, ns = ...
 local L = ns.L
 
 local function initSavedVars()
-  MountRoadmapDB = MountRoadmapDB or {}
-  MountRoadmapCharDB = MountRoadmapCharDB or {}
-  ns.db = MountRoadmapDB
-  ns.charDB = MountRoadmapCharDB
+  SAMountsDB = SAMountsDB or {}
+  SAMountsCharDB = SAMountsCharDB or {}
+  ns.db = SAMountsDB
+  ns.charDB = SAMountsCharDB
 
   ns.db.minimap = ns.db.minimap or { angle = 200, hide = false }
   ns.charDB.doneRuns = ns.charDB.doneRuns or {}
@@ -42,9 +42,9 @@ C_Timer.NewTicker(30, function()
 end)
 
 -- --- slash commands -------------------------------------------------------
-SLASH_MOUNTROADMAP1 = "/mountroadmap"
-SLASH_MOUNTROADMAP2 = "/mr"
-SlashCmdList.MOUNTROADMAP = function(msg)
+SLASH_SAMOUNTS1 = "/samounts"
+SLASH_SAMOUNTS2 = "/sam"
+SlashCmdList.SAMOUNTS = function(msg)
   msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
   if msg == "next" then
     ns.Progress.Next()
@@ -62,11 +62,11 @@ SlashCmdList.MOUNTROADMAP = function(msg)
     end
   elseif msg == "help" then
     ns.Print(L["Commands:"])
-    print("  " .. L["/mr — open/close the window"])
-    print("  " .. L["/mr next | prev — navigate steps"])
-    print("  " .. L["/mr guide — set a waypoint to the current step"])
-    print("  " .. L["/mr reset — clear this-reset progress"])
-    print("  " .. L["/mr minimap — toggle the minimap button"])
+    print("  " .. L["/sam — open/close the window"])
+    print("  " .. L["/sam next | prev — navigate steps"])
+    print("  " .. L["/sam guide — set a waypoint to the current step"])
+    print("  " .. L["/sam reset — clear this-reset progress"])
+    print("  " .. L["/sam minimap — toggle the minimap button"])
   else
     ns.UI.Toggle()
   end

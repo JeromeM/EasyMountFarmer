@@ -7,7 +7,7 @@ local Detect = ns.Detect
 
 -- Find the active target whose boss matches this encounterID.
 local function targetForEncounter(encounterID)
-  local loc = MountRoadmapLocations or {}
+  local loc = SAMountsLocations or {}
   for _, t in ipairs(ns.allTargets or {}) do
     local l = loc[t.key]
     if l and l.encounters then

@@ -7,7 +7,7 @@ local Lockouts = ns.Lockouts
 
 function Lockouts.Scan()
   if not ns.charDB or not ns.Progress then return end
-  local loc = MountRoadmapLocations or {}
+  local loc = SAMountsLocations or {}
 
   -- map lockout name -> target (among still-active/relevant targets)
   local byLockout = {}

@@ -8,5 +8,5 @@ ns.L = setmetatable({}, { __index = function(_, k) return k end })
 
 -- Chat message helper with the addon tag.
 function ns.Print(msg)
-  print("|cffffd200Mount Roadmap|r: " .. tostring(msg))
+  print("|cffffd200SAMounts|r: " .. tostring(msg))
 end
