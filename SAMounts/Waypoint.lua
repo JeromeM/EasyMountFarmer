@@ -6,6 +6,24 @@ ns.Waypoint = ns.Waypoint or {}
 local Waypoint = ns.Waypoint
 local L = ns.L
 
+-- Low-level: set a waypoint/arrow to an explicit UI map point (x,y in 0-1).
+function Waypoint.SetTo(mapID, x, y, title)
+  if not mapID or not x or not y then return end
+  if TomTom and TomTom.AddWaypoint then
+    TomTom:AddWaypoint(mapID, x, y, {
+      title = title, from = "SAMounts", persistent = false, minimap = true, world = true,
+    })
+    return
+  end
+  if C_Map and C_Map.SetUserWaypoint and UiMapPoint and UiMapPoint.CreateFromCoordinates then
+    if C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(mapID) then return end
+    C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, x, y))
+    if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
+      C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+    end
+  end
+end
+
 function Waypoint.GuideTo(target, silent)
   if not target then return end
   local l = (SAMountsLocations or {})[target.key]

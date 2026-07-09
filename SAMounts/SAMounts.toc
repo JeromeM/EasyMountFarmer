@@ -5,7 +5,7 @@
 ## Version: 0.1.0
 ## SavedVariables: SAMountsDB
 ## SavedVariablesPerCharacter: SAMountsCharDB
-## OptionalDeps: TomTom
+## OptionalDeps: TomTom, FarstriderLib
 ## X-Website: https://simplearmory.com
 
 Locale.lua
@@ -19,6 +19,7 @@ Difficulty.lua
 Detect.lua
 Waypoint.lua
 Travel.lua
+Nav.lua
 UI.lua
 MinimapButton.lua
 Core.lua

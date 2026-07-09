@@ -279,14 +279,18 @@ function UI.Refresh()
 
   -- keep a live arrow to the current target's entrance (only while the window is
   -- open, and re-set only on step change so it doesn't fight your own waypoints)
-  if ns.db and ns.db.autoGuide and f:IsShown() and cur.key ~= UI.lastGuidedKey then
-    UI.lastGuidedKey = cur.key
-    ns.Waypoint.GuideTo(cur, true)  -- silent: no chat spam if coords are missing
-  end
-
-  -- clickable on-screen action for the first travel step (Hearthstone for now)
-  if f:IsShown() then
-    ns.Travel.ShowAction("item", 6948)
+  -- navigation: FarstriderLib turn-by-turn (action button + arrow to next hop)
+  -- when available; otherwise a simple arrow to the entrance.
+  if f:IsShown() and ns.db and ns.db.autoGuide then
+    if not ns.Nav.Update(cur) then
+      ns.Travel.Hide()
+      if cur.key ~= UI.lastGuidedKey then
+        UI.lastGuidedKey = cur.key
+        ns.Waypoint.GuideTo(cur, true)  -- silent
+      end
+    end
+  elseif f:IsShown() then
+    ns.Travel.Hide()
   end
 end
 
