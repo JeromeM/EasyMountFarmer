@@ -1,8 +1,8 @@
 -- Travel.lua — on-screen, movable, CLICKABLE action button for the current
--- travel step (use hearthstone / cast a teleport / use a toy). It is a secure
--- macro button parented to UIParent (NOT inside our movable window — that is
--- what triggers "Cannot anchor protected frames to regions"). Names/icons are
--- resolved from IDs at runtime, so everything is localized.
+-- travel step (use hearthstone / cast a teleport / use a toy). Icon-only.
+-- It is a secure button parented to UIParent (NOT inside our movable window —
+-- that is what triggers "Cannot anchor protected frames to regions"). Names and
+-- icons are resolved from IDs at runtime, so everything is localized.
 
 local ADDON, ns = ...
 ns.Travel = ns.Travel or {}
@@ -10,7 +10,7 @@ local Travel = ns.Travel
 local L = ns.L
 
 local btn
-local pending          -- action to apply once out of combat: { kind, id, label }
+local pending          -- action to apply once out of combat: { kind, id }
 
 -- --- localized name / icon resolution -------------------------------------
 local function itemName(id)
@@ -27,34 +27,32 @@ local function spellIcon(id)
   return C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(id)
 end
 
--- macrotext for an action (localized where needed; items go by id, so no locale issue)
-local function macrotext(kind, id)
-  if kind == "item" or kind == "toy" then return "/use item:" .. id end
-  if kind == "spell" then
-    local n = spellName(id)
-    return n and ("/cast " .. n) or nil
-  end
-  return nil
-end
-
--- --- the secure button ----------------------------------------------------
+-- --- the secure icon button -----------------------------------------------
 local function ensureButton()
   if btn then return btn end
   btn = CreateFrame("Button", "SAMountsActionButton", UIParent,
-    "SecureActionButtonTemplate,UIPanelButtonTemplate")
-  btn:SetSize(210, 30)
+    "SecureActionButtonTemplate,BackdropTemplate")
+  btn:SetSize(44, 44)
   btn:SetFrameStrata("HIGH")
   btn:SetClampedToScreen(true)
   btn:SetMovable(true)
   btn:RegisterForDrag("LeftButton")
-  btn:RegisterForClicks("AnyUp")
+  btn:RegisterForClicks("AnyUp", "AnyDown")
+
+  btn:SetBackdrop({
+    bgFile = "Interface\\Buttons\\WHITE8x8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 },
+  })
+  btn:SetBackdropColor(0, 0, 0, 0.6)
 
   btn.icon = btn:CreateTexture(nil, "ARTWORK")
-  btn.icon:SetSize(22, 22)
-  btn.icon:SetPoint("LEFT", 5, 0)
+  btn.icon:SetPoint("TOPLEFT", 4, -4)
+  btn.icon:SetPoint("BOTTOMRIGHT", -4, 4)
   btn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
-  -- dragging moves a protected frame -> only allowed out of combat
+  btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+
   btn:SetScript("OnDragStart", function(self)
     if not InCombatLockdown() then self:StartMoving() end
   end)
@@ -63,6 +61,18 @@ local function ensureButton()
     local p, _, rp, x, y = self:GetPoint()
     ns.db.actionPos = { p = p, rp = rp, x = x, y = y }
   end)
+
+  btn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    if self.actionKind == "spell" and self.actionId then
+      GameTooltip:SetSpellByID(self.actionId)
+    elseif self.actionId then
+      GameTooltip:SetItemByID(self.actionId)
+    end
+    GameTooltip:AddLine(L["Click to use, drag to move"], 0.6, 0.6, 0.6)
+    GameTooltip:Show()
+  end)
+  btn:SetScript("OnLeave", GameTooltip_Hide)
 
   local pos = ns.db and ns.db.actionPos
   btn:ClearAllPoints()
@@ -75,22 +85,24 @@ local function ensureButton()
   return btn
 end
 
--- Show a clickable action. kind = "item" | "toy" | "spell". label optional.
-function Travel.ShowAction(kind, id, label)
+-- Show a clickable action. kind = "item" | "toy" | "spell".
+function Travel.ShowAction(kind, id)
   ensureButton()
   if InCombatLockdown() then
-    pending = { kind = kind, id = id, label = label }  -- apply after combat
+    pending = { kind = kind, id = id }   -- attributes can't change in combat
     return
   end
   pending = nil
-  local mt = macrotext(kind, id)
-  if not mt then btn:Hide(); return end
-  btn:SetAttribute("type", "macro")
-  btn:SetAttribute("macrotext", mt)
-  local name = label or (kind == "spell" and spellName(id)) or itemName(id) or ("#" .. tostring(id))
-  btn:SetText(name)
+  if kind == "spell" then
+    btn:SetAttribute("type", "spell")
+    btn:SetAttribute("spell", spellName(id) or id)
+  else -- item or toy
+    btn:SetAttribute("type", "item")
+    btn:SetAttribute("item", "item:" .. id)
+  end
+  btn.actionKind, btn.actionId = kind, id
   local ic = (kind == "spell") and spellIcon(id) or itemIcon(id)
-  if ic then btn.icon:SetTexture(ic); btn.icon:Show() else btn.icon:Hide() end
+  btn.icon:SetTexture(ic or "Interface\\Icons\\INV_Misc_QuestionMark")
   btn:Show()
 end
 
@@ -103,8 +115,5 @@ end
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:SetScript("OnEvent", function()
-  if pending then
-    local p = pending
-    Travel.ShowAction(p.kind, p.id, p.label)
-  end
+  if pending then Travel.ShowAction(pending.kind, pending.id) end
 end)

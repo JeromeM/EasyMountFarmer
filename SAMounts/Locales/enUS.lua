@@ -29,6 +29,7 @@ L["Hearthstone -> %s"] = "Hearthstone -> %s"
 L["Use your Hearthstone (goes to where it is bound)"] = "Use your Hearthstone (goes to where it is bound)"
 L["Auto waypoint arrow: ON"] = "Auto waypoint arrow: ON"
 L["Auto waypoint arrow: OFF"] = "Auto waypoint arrow: OFF"
+L["Click to use, drag to move"] = "Click to use, drag to move"
 L["Stormwind"] = "Stormwind"
 L["Orgrimmar"] = "Orgrimmar"
 
