@@ -5,7 +5,7 @@
 ## Version: 0.1.0
 ## SavedVariables: SAMountsDB
 ## SavedVariablesPerCharacter: SAMountsCharDB
-## OptionalDeps: TomTom
+## OptionalDeps: TomTom, QuickRoute, Mapzeroth
 ## X-Website: https://simplearmory.com
 
 Locale.lua

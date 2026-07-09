@@ -12,7 +12,20 @@ avec :
 - retour automatique à l'étape 1 aux resets (quotidien pour les donjons, hebdo pour les raids) ;
 - détection des lockouts de raid déjà pris cette semaine ;
 - bouton pour passer à la bonne difficulté (héroïque / mythique / 10-25) ;
-- guidage par waypoint (TomTom si présent, sinon flèche Blizzard).
+- guidage par waypoint (TomTom si présent, sinon flèche Blizzard) ;
+- bouton pierre de foyer (utilise ta Hearthstone) pour amorcer le trajet.
+
+## Navigation avancée (optionnel)
+
+SAMounts ne calcule pas l'itinéraire complet (portails, chemins de vol, téléports) — il pose la
+destination (waypoint sur l'entrée de l'instance). Pour un vrai routage pas-à-pas cliquable, installe un
+addon de pathfinding qui auto-route vers le waypoint actif :
+
+- **QuickRoute** (Dijkstra, cooldowns, faction/classe ; auto-route vers le waypoint super-suivi / TomTom) ;
+- **Mapzeroth** (« Google Maps » de WoW, étapes cliquables).
+
+Comme SAMounts pose déjà un waypoint super-suivi (ou TomTom) sur l'entrée, ces addons le détectent et
+calculent le trajet automatiquement. Rien à configurer côté SAMounts.
 
 ## Installation (usage privé)
 
