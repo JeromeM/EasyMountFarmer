@@ -110,9 +110,13 @@ function UI.Init()
 
   -- hearthstone action button: uses your Hearthstone (goes wherever it's bound).
   -- Secure item-use button; attributes set once here (out of combat), never toggled.
+  -- A secure (protected) button cannot SetPoint to a FontString region, so we
+  -- anchor it to an intermediate plain Frame instead.
+  local navAnchor = CreateFrame("Frame", nil, f)
+  navAnchor:SetSize(230, 20)
+  navAnchor:SetPoint("TOPLEFT", f.trail, "BOTTOMLEFT", 0, -2)
   f.hearth = CreateFrame("Button", "SAMountsHearthButton", f, "SecureActionButtonTemplate,UIPanelButtonTemplate")
-  f.hearth:SetSize(230, 20)
-  f.hearth:SetPoint("TOPLEFT", f.trail, "BOTTOMLEFT", 0, -2)
+  f.hearth:SetAllPoints(navAnchor)
   f.hearth:RegisterForClicks("AnyUp")
   f.hearth:SetAttribute("type", "item")
   f.hearth:SetAttribute("item", "item:6948")  -- Hearthstone
@@ -125,7 +129,7 @@ function UI.Init()
 
   -- target (instance/run) title
   f.target = f:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  f.target:SetPoint("TOPLEFT", f.hearth, "BOTTOMLEFT", 0, -6)
+  f.target:SetPoint("TOPLEFT", navAnchor, "BOTTOMLEFT", 0, -6)
   f.target:SetPoint("RIGHT", -18, 0)
   f.target:SetJustifyH("LEFT")
 
@@ -221,7 +225,7 @@ end
 -- --- refresh the display --------------------------------------------------
 function UI.Refresh()
   local f = UI.frame
-  if not f then return end
+  if not f or not f.target then return end
 
   f.reset:SetText(string.format(L["Daily reset: %s"], UI.Dur(ns.Progress.SecondsUntilDaily()))
     .. "   " .. GREY .. "•|r   " .. string.format(L["Weekly: %s"], UI.Dur(ns.Progress.SecondsUntilWeekly())))
