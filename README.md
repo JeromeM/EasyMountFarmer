@@ -12,8 +12,7 @@ avec :
 - retour automatique à l'étape 1 aux resets (quotidien pour les donjons, hebdo pour les raids) ;
 - détection des lockouts de raid déjà pris cette semaine ;
 - bouton pour passer à la bonne difficulté (héroïque / mythique / 10-25) ;
-- guidage par waypoint (TomTom si présent, sinon flèche Blizzard) ;
-- bouton pierre de foyer (utilise ta Hearthstone) pour amorcer le trajet.
+- guidage par waypoint auto vers l'entrée (TomTom si présent, sinon flèche Blizzard).
 
 ## Navigation avancée (optionnel)
 
