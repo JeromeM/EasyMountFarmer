@@ -6,11 +6,13 @@ ns.Waypoint = ns.Waypoint or {}
 local Waypoint = ns.Waypoint
 local L = ns.L
 
-function Waypoint.GuideTo(target)
+function Waypoint.GuideTo(target, silent)
   if not target then return end
   local l = (SAMountsLocations or {})[target.key]
   if not l or not l.map or not l.x or not l.y then
-    ns.Print(string.format(L["No coordinates for \"%s\" (fill them in Locations.lua)."], target.title or "?"))
+    if not silent then
+      ns.Print(string.format(L["No coordinates for \"%s\" (fill them in Locations.lua)."], target.title or "?"))
+    end
     return
   end
 

@@ -23,8 +23,12 @@ L["Reset all"] = "Reset all"
 L["Reset all completed steps for this reset?"] = "Reset all completed steps for this reset?"
 L["Mount obtained!"] = "Mount obtained!"
 
--- breadcrumb
+-- breadcrumb / navigation
 L["Hearthstone: %s"] = "Hearthstone: %s"
+L["Hearthstone -> %s"] = "Hearthstone -> %s"
+L["Use your Hearthstone (goes to where it is bound)"] = "Use your Hearthstone (goes to where it is bound)"
+L["Auto waypoint arrow: ON"] = "Auto waypoint arrow: ON"
+L["Auto waypoint arrow: OFF"] = "Auto waypoint arrow: OFF"
 L["Stormwind"] = "Stormwind"
 L["Orgrimmar"] = "Orgrimmar"
 
@@ -59,4 +63,5 @@ L["/sam next | prev — navigate steps"] = "/sam next | prev — navigate steps"
 L["/sam guide — set a waypoint to the current step"] = "/sam guide — set a waypoint to the current step"
 L["/sam reset — clear this-reset progress"] = "/sam reset — clear this-reset progress"
 L["/sam minimap — toggle the minimap button"] = "/sam minimap — toggle the minimap button"
+L["/sam arrow — toggle the auto waypoint arrow"] = "/sam arrow — toggle the auto waypoint arrow"
 L["/sam debug — show saved-instance diagnostics"] = "/sam debug — show saved-instance diagnostics"

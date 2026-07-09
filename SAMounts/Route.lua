@@ -88,10 +88,11 @@ function Route.BuildTargets()
       elseif step.steps then
         local label = step.title
         local entry
-        if step.capital then
-          entry = { label = string.format(L["Hearthstone: %s"], CapitalName(isAlliance)), capital = true }
+        if step.startStep then
+          -- the initial "hearthstone to your faction capital" step
+          entry = { label = string.format(L["Hearthstone: %s"], CapitalName(isAlliance)), hearth = true }
         elseif label and label ~= "" and label ~= "Start in " then
-          entry = { label = label }
+          entry = { label = (label:gsub("^and ", "")), capital = step.capital }
         end
         walk(step.steps, entry and copyTrail(trail, entry) or trail)
       end

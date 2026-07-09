@@ -53,7 +53,7 @@ function UI.Init()
   local f = CreateFrame("Frame", "SAMountsFrame", UIParent,
     BackdropTemplateMixin and "BackdropTemplate" or nil)
   UI.frame = f
-  f:SetSize(384, 372)
+  f:SetSize(384, 398)
   f:SetFrameStrata("MEDIUM")
   f:SetToplevel(true)
   f:SetBackdrop(BACKDROP)
@@ -108,9 +108,24 @@ function UI.Init()
   f.trail:SetJustifyV("TOP")
   f.trail:SetWordWrap(true)
 
+  -- hearthstone action button: uses your Hearthstone (goes wherever it's bound).
+  -- Secure item-use button; attributes set once here (out of combat), never toggled.
+  f.hearth = CreateFrame("Button", "SAMountsHearthButton", f, "SecureActionButtonTemplate,UIPanelButtonTemplate")
+  f.hearth:SetSize(230, 20)
+  f.hearth:SetPoint("TOPLEFT", f.trail, "BOTTOMLEFT", 0, -2)
+  f.hearth:RegisterForClicks("AnyUp")
+  f.hearth:SetAttribute("type", "item")
+  f.hearth:SetAttribute("item", "item:6948")  -- Hearthstone
+  f.hearth:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText(L["Use your Hearthstone (goes to where it is bound)"])
+    GameTooltip:Show()
+  end)
+  f.hearth:SetScript("OnLeave", GameTooltip_Hide)
+
   -- target (instance/run) title
   f.target = f:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  f.target:SetPoint("TOPLEFT", f.trail, "BOTTOMLEFT", 0, -6)
+  f.target:SetPoint("TOPLEFT", f.hearth, "BOTTOMLEFT", 0, -6)
   f.target:SetPoint("RIGHT", -18, 0)
   f.target:SetJustifyH("LEFT")
 
@@ -211,6 +226,8 @@ function UI.Refresh()
   f.reset:SetText(string.format(L["Daily reset: %s"], UI.Dur(ns.Progress.SecondsUntilDaily()))
     .. "   " .. GREY .. "•|r   " .. string.format(L["Weekly: %s"], UI.Dur(ns.Progress.SecondsUntilWeekly())))
 
+  f.hearth:SetText(string.format(L["Hearthstone -> %s"], GetBindLocation() or "?"))
+
   local active = ns.Progress.Active()
   local n = #active
   local total = ns.Route.CountRemainingMounts(ns.allTargets or {})
@@ -274,6 +291,13 @@ function UI.Refresh()
     f.diff:Show()
   else
     f.diff:Hide()
+  end
+
+  -- keep a live arrow to the current target's entrance (only while the window is
+  -- open, and re-set only on step change so it doesn't fight your own waypoints)
+  if ns.db and ns.db.autoGuide and f:IsShown() and cur.key ~= UI.lastGuidedKey then
+    UI.lastGuidedKey = cur.key
+    ns.Waypoint.GuideTo(cur, true)  -- silent: no chat spam if coords are missing
   end
 end
 

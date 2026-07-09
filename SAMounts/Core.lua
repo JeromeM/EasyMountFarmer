@@ -11,6 +11,7 @@ local function initSavedVars()
   ns.charDB = SAMountsCharDB
 
   ns.db.minimap = ns.db.minimap or { angle = 200, hide = false }
+  if ns.db.autoGuide == nil then ns.db.autoGuide = true end
   ns.charDB.doneRuns = ns.charDB.doneRuns or {}
   ns.charDB.currentIdx = ns.charDB.currentIdx or 1
 end
@@ -65,6 +66,10 @@ SlashCmdList.SAMOUNTS = function(msg)
     if ns.Minimap.button then
       ns.Minimap.button:SetShown(not ns.db.minimap.hide)
     end
+  elseif msg == "arrow" then
+    ns.db.autoGuide = not ns.db.autoGuide
+    ns.Print(ns.db.autoGuide and L["Auto waypoint arrow: ON"] or L["Auto waypoint arrow: OFF"])
+    if ns.db.autoGuide and ns.UI then ns.UI.lastGuidedKey = nil; ns.UI.Refresh() end
   elseif msg == "debug" then
     -- diagnostics: what the client actually reports as saved instances
     RequestRaidInfo()
@@ -88,6 +93,7 @@ SlashCmdList.SAMOUNTS = function(msg)
     print("  " .. L["/sam guide — set a waypoint to the current step"])
     print("  " .. L["/sam reset — clear this-reset progress"])
     print("  " .. L["/sam minimap — toggle the minimap button"])
+    print("  " .. L["/sam arrow — toggle the auto waypoint arrow"])
     print("  " .. L["/sam debug — show saved-instance diagnostics"])
   else
     ns.UI.Toggle()
