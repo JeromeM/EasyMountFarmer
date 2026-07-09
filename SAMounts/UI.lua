@@ -53,7 +53,7 @@ function UI.Init()
   local f = CreateFrame("Frame", "SAMountsFrame", UIParent,
     BackdropTemplateMixin and "BackdropTemplate" or nil)
   UI.frame = f
-  f:SetSize(384, 398)
+  f:SetSize(384, 372)
   f:SetFrameStrata("MEDIUM")
   f:SetToplevel(true)
   f:SetBackdrop(BACKDROP)
@@ -110,27 +110,9 @@ function UI.Init()
 
   -- hearthstone action button: uses your Hearthstone (goes wherever it's bound).
   -- Secure item-use button; attributes set once here (out of combat), never toggled.
-  -- A protected (secure) frame may only be anchored to its own parent. So we make
-  -- an intermediate plain Frame the button's PARENT and fill it (that Frame in turn
-  -- anchors freely under the breadcrumb).
-  local navAnchor = CreateFrame("Frame", nil, f)
-  navAnchor:SetSize(230, 20)
-  navAnchor:SetPoint("TOPLEFT", f.trail, "BOTTOMLEFT", 0, -2)
-  f.hearth = CreateFrame("Button", "SAMountsHearthButton", navAnchor, "SecureActionButtonTemplate,UIPanelButtonTemplate")
-  f.hearth:SetAllPoints(navAnchor)   -- anchored to its parent -> allowed for protected frames
-  f.hearth:RegisterForClicks("AnyUp")
-  f.hearth:SetAttribute("type", "item")
-  f.hearth:SetAttribute("item", "item:6948")  -- Hearthstone
-  f.hearth:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:SetText(L["Use your Hearthstone (goes to where it is bound)"])
-    GameTooltip:Show()
-  end)
-  f.hearth:SetScript("OnLeave", GameTooltip_Hide)
-
   -- target (instance/run) title
   f.target = f:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  f.target:SetPoint("TOPLEFT", navAnchor, "BOTTOMLEFT", 0, -6)
+  f.target:SetPoint("TOPLEFT", f.trail, "BOTTOMLEFT", 0, -6)
   f.target:SetPoint("RIGHT", -18, 0)
   f.target:SetJustifyH("LEFT")
 
@@ -230,8 +212,6 @@ function UI.Refresh()
 
   f.reset:SetText(string.format(L["Daily reset: %s"], UI.Dur(ns.Progress.SecondsUntilDaily()))
     .. "   " .. GREY .. "•|r   " .. string.format(L["Weekly: %s"], UI.Dur(ns.Progress.SecondsUntilWeekly())))
-
-  f.hearth:SetText(string.format(L["Hearthstone -> %s"], GetBindLocation() or "?"))
 
   local active = ns.Progress.Active()
   local n = #active
