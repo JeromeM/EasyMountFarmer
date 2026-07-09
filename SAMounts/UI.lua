@@ -110,13 +110,14 @@ function UI.Init()
 
   -- hearthstone action button: uses your Hearthstone (goes wherever it's bound).
   -- Secure item-use button; attributes set once here (out of combat), never toggled.
-  -- A secure (protected) button cannot SetPoint to a FontString region, so we
-  -- anchor it to an intermediate plain Frame instead.
+  -- A protected (secure) frame may only be anchored to its own parent. So we make
+  -- an intermediate plain Frame the button's PARENT and fill it (that Frame in turn
+  -- anchors freely under the breadcrumb).
   local navAnchor = CreateFrame("Frame", nil, f)
   navAnchor:SetSize(230, 20)
   navAnchor:SetPoint("TOPLEFT", f.trail, "BOTTOMLEFT", 0, -2)
-  f.hearth = CreateFrame("Button", "SAMountsHearthButton", f, "SecureActionButtonTemplate,UIPanelButtonTemplate")
-  f.hearth:SetAllPoints(navAnchor)
+  f.hearth = CreateFrame("Button", "SAMountsHearthButton", navAnchor, "SecureActionButtonTemplate,UIPanelButtonTemplate")
+  f.hearth:SetAllPoints(navAnchor)   -- anchored to its parent -> allowed for protected frames
   f.hearth:RegisterForClicks("AnyUp")
   f.hearth:SetAttribute("type", "item")
   f.hearth:SetAttribute("item", "item:6948")  -- Hearthstone
