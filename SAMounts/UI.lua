@@ -227,6 +227,7 @@ function UI.Refresh()
     f.target:SetText("")
     for _, row in ipairs(UI.rows) do row:Hide() end
     f.prev:Disable(); f.next:Disable(); f.guide:Disable(); f.done:Disable(); f.diff:Hide()
+    ns.Travel.Hide()
     return
   end
 
@@ -282,6 +283,11 @@ function UI.Refresh()
     UI.lastGuidedKey = cur.key
     ns.Waypoint.GuideTo(cur, true)  -- silent: no chat spam if coords are missing
   end
+
+  -- clickable on-screen action for the first travel step (Hearthstone for now)
+  if f:IsShown() then
+    ns.Travel.ShowAction("item", 6948)
+  end
 end
 
 -- --- show/hide ------------------------------------------------------------
@@ -293,6 +299,7 @@ end
 
 function UI.Hide()
   if UI.frame then UI.frame:Hide() end
+  if ns.Travel then ns.Travel.Hide() end
 end
 
 function UI.Toggle()

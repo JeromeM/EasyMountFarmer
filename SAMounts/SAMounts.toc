@@ -18,6 +18,7 @@ Lockouts.lua
 Difficulty.lua
 Detect.lua
 Waypoint.lua
+Travel.lua
 UI.lua
 MinimapButton.lua
 Core.lua
