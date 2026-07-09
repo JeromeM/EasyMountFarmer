@@ -41,7 +41,10 @@ function Difficulty.NeedsSwitch(target)
   local l = locFor(target)
   if not l or not l.reqDiff or not l.diffScope then return false end
   local cur = Difficulty.GetCurrent(l.diffScope)
-  return cur ~= nil and cur ~= l.reqDiff
+  if cur == nil or cur == l.reqDiff then return false end
+  -- A Mythic Keystone (8) also satisfies a Mythic (23) dungeon requirement.
+  if l.diffScope == "dungeon" and l.reqDiff == 23 and cur == 8 then return false end
+  return true
 end
 
 -- Button text, e.g. "Switch to Mythic".
@@ -64,5 +67,14 @@ function Difficulty.SwitchTo(target)
   if not ok then
     ns.Print(L["Cannot change difficulty (party leader required, or already inside the instance)."])
   end
+  -- The change is async; PLAYER_DIFFICULTY_CHANGED (below) refreshes once it lands.
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end
+
+-- The difficulty change is applied asynchronously by the client, so re-refresh
+-- the window when it actually lands (also catches manual changes via the game UI).
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_DIFFICULTY_CHANGED")
+f:SetScript("OnEvent", function()
+  if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
+end)
