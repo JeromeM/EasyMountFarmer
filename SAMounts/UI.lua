@@ -108,8 +108,6 @@ function UI.Init()
   f.trail:SetJustifyV("TOP")
   f.trail:SetWordWrap(true)
 
-  -- hearthstone action button: uses your Hearthstone (goes wherever it's bound).
-  -- Secure item-use button; attributes set once here (out of combat), never toggled.
   -- target (instance/run) title
   f.target = f:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
   f.target:SetPoint("TOPLEFT", f.trail, "BOTTOMLEFT", 0, -6)
