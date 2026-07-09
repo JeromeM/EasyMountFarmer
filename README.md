@@ -20,11 +20,11 @@ SAMounts ne calcule pas l'itinéraire complet (portails, chemins de vol, télép
 destination (waypoint sur l'entrée de l'instance). Pour un vrai routage pas-à-pas cliquable, installe un
 addon de pathfinding qui auto-route vers le waypoint actif :
 
-- **QuickRoute** (Dijkstra, cooldowns, faction/classe ; auto-route vers le waypoint super-suivi / TomTom) ;
-- **Mapzeroth** (« Google Maps » de WoW, étapes cliquables).
-
-Comme SAMounts pose déjà un waypoint super-suivi (ou TomTom) sur l'entrée, ces addons le détectent et
-calculent le trajet automatiquement. Rien à configurer côté SAMounts.
+- **Mapzeroth** (recommandé) — « Google Maps » de WoW, étapes cliquables. Il route vers le waypoint actif
+  via `/mz waypoint`. Comme SAMounts pose déjà un waypoint sur l'entrée, **« Guide me » déclenche
+  automatiquement `/mz waypoint`** si Mapzeroth est chargé — rien à taper.
+- **QuickRoute** — alternative similaire, mais elle peut lever des erreurs internes selon les versions ;
+  si c'est le cas, désactive-la et garde Mapzeroth.
 
 ## Installation (usage privé)
 
