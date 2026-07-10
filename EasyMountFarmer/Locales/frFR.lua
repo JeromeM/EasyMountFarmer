@@ -57,6 +57,7 @@ L["Looted the mount: %s!"] = "Monture lootée : %s !"
 
 -- filter (categories + expansions)
 L["Filters"] = "Filtres"
+L["Ctrl + click to preview"] = "Ctrl + clic pour voir"
 L["Lock the window position"] = "Verrouiller la position de la fenêtre"
 L["Show these categories"] = "Afficher ces catégories"
 L["Show these expansions"] = "Afficher ces extensions"

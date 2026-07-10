@@ -3,6 +3,13 @@
 All notable changes to EasyMountFarmer are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [0.2.1] - 2026-07-10
+
+### Added
+- Mount tooltips in the main window now show the mount's **expansion** and **where it
+  drops** (boss · instance, or vendor / region for open-world mounts).
+- **Ctrl + click** a mount row to open its **3D preview** (dressing room).
+
 ## [0.2.0] - 2026-07-10
 
 ### Added

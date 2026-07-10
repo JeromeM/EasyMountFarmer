@@ -53,6 +53,7 @@ L["Looted the mount: %s!"] = "Looted the mount: %s!"
 
 -- filter (categories + expansions)
 L["Filters"] = "Filters"
+L["Ctrl + click to preview"] = "Ctrl + click to preview"
 L["Lock the window position"] = "Lock the window position"
 L["Show these categories"] = "Show these categories"
 L["Show these expansions"] = "Show these expansions"

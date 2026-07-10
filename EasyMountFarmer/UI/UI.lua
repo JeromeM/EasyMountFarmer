@@ -66,6 +66,13 @@ local function iconFor(boss)
   return "Interface\\Icons\\INV_Misc_QuestionMark"
 end
 
+--- Open the mount preview (dressing-room 3D model) for a mount/boss entry.
+---@param boss table  a mount/boss entry (uses .mountID)
+local function previewMount(boss)
+  if not boss or not boss.mountID then return end
+  if DressUpMount then pcall(DressUpMount, boss.mountID) end
+end
+
 --- Split a mount's localized source text into its individual lines. The source is
 --- a few lines separated by "|n" (WoW's newline token) or real newlines, e.g.
 --- "Drop: <boss>|n<instance>|n<expansion>"; color codes and inline textures are stripped.
@@ -198,6 +205,24 @@ local function diffBadge(target)
     if ok and name and name ~= "" then return name, MYTHIC_DIFFS[req] end
   end
   return nil
+end
+
+--- Build the tooltip "where it drops" line (concise, localized).
+---@param target table  the farm target
+---@param boss table  the mount/boss entry
+---@return string  a source string (may be empty)
+local function dropInfo(target, boss)
+  local cat = target.category
+  if cat == "rare" or cat == "treasure" or cat == "vendor" or cat == "event" then
+    local bits = {}
+    if cat == "vendor" and target.vendor and target.vendor ~= "" then bits[#bits + 1] = target.vendor end
+    if target.zoneName and target.zoneName ~= "" then bits[#bits + 1] = target.zoneName end
+    return table.concat(bits, " · ")
+  end
+  local bn = bossName(boss)
+  local inst = instanceName(target)
+  if bn and inst and bn ~= inst then return bn .. " · " .. inst end
+  return inst or bn or ""
 end
 
 --- Format a duration in seconds as "Xd Yh" / "Xh Ym" / "Xm".
@@ -609,8 +634,8 @@ function UI.Init()
     row.badgeText:SetPoint("CENTER")
 
     row:EnableMouse(true)
-    --- Show a tooltip for the row's mount (by spell/item id, else plain name) plus any note.
-    ---@param self Frame  the hovered row (has .data mount entry and .noteText)
+    --- Tooltip: the game's mount info, the expansion, where it drops, and the preview hint.
+    ---@param self Frame  the hovered row (has .data, .expansionText, .locInfo, .noteText)
     row:SetScript("OnEnter", function(self)
       if not self.data then return end
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -622,12 +647,24 @@ function UI.Init()
       else
         GameTooltip:SetText(mountName(b))
       end
+      if self.expansionText and self.expansionText ~= "" then
+        GameTooltip:AddLine(self.expansionText, 0.9, 0.72, 0.32)   -- amber
+      end
+      if self.locInfo and self.locInfo ~= "" then
+        GameTooltip:AddLine(self.locInfo, 0.7, 0.7, 0.7, true)
+      end
       if self.noteText and self.noteText ~= "" then
         GameTooltip:AddLine(self.noteText, 0.7, 0.7, 0.7, true)
       end
+      GameTooltip:AddLine(L["Ctrl + click to preview"], 0.35, 0.7, 1.0)
       GameTooltip:Show()
     end)
     row:SetScript("OnLeave", GameTooltip_Hide)
+    --- Ctrl + click opens the mount's 3D preview (dressing room).
+    ---@param self Frame  the clicked row
+    row:SetScript("OnMouseUp", function(self)
+      if IsControlKeyDown() and self.data then previewMount(self.data) end
+    end)
     UI.rows[i] = row
   end
 
@@ -902,6 +939,8 @@ function UI.Refresh()
     row:SetAlpha(rowAlpha)
     row.data = boss
     row.noteText = boss.note or ""
+    row.locInfo = dropInfo(cur, boss)
+    row.expansionText = cur.expansion and L[cur.expansion] or nil
     row.icon:SetTexture(iconFor(boss))
     local rc = boss.epic and C_EPIC or C_RARE
     row.iconFrame:SetBackdropBorderColor(rc[1], rc[2], rc[3], 0.9)
