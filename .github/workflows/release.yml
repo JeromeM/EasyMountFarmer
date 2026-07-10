@@ -1,0 +1,100 @@
+name: Release
+
+# Publishes ONLY on master (i.e. after a branch is merged), and only when the
+# addon version (## Version in the .toc) is new (no matching git tag yet). A
+# doc-only merge with the same version does nothing.
+#
+# The zip is built by scripts/package.sh — the exact same artifact you get locally
+# (generator stripped, data baked in) — then uploaded to CurseForge and Wago, and
+# attached to a GitHub Release tagged vX.Y.Z.
+#
+# Required repo config (Settings -> Secrets and variables -> Actions):
+#   Secrets:   CF_API_KEY, WAGO_API_TOKEN
+#   Variables: CF_PROJECT_ID, WAGO_PROJECT_ID
+# and Settings -> Actions -> Workflow permissions: "Read and write".
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create tags + GitHub releases
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need tags to detect an already-released version
+
+      - name: Resolve version + game patch
+        id: meta
+        run: |
+          toc=EasyMountFarmer/EasyMountFarmer.toc
+          v=$(grep -m1 '## Version:'   "$toc" | sed 's/.*:[[:space:]]*//' | tr -d '\r')
+          iface=$(grep -m1 '## Interface:' "$toc" | sed 's/.*:[[:space:]]*//' | tr -d '\r')
+          patch="$((10#$iface/10000)).$((10#$iface/100%100)).$((10#$iface%100))"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "patch=$patch" >> "$GITHUB_OUTPUT"
+          if git rev-parse "v$v" >/dev/null 2>&1; then
+            echo "exists=true"  >> "$GITHUB_OUTPUT"
+            echo "Version v$v already tagged — nothing to publish."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build package
+        if: steps.meta.outputs.exists == 'false'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq zip
+          bash scripts/package.sh
+          echo "ZIP=EasyMountFarmer-${{ steps.meta.outputs.version }}.zip" >> "$GITHUB_ENV"
+
+      - name: Extract changelog notes
+        id: notes
+        if: steps.meta.outputs.exists == 'false'
+        run: |
+          awk -v v="${{ steps.meta.outputs.version }}" '
+            $0 ~ ("^## \\[" v "\\]") {p=1; next}
+            p && /^## \[/ {exit}
+            p {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          [ -s RELEASE_NOTES.md ] || echo "EasyMountFarmer ${{ steps.meta.outputs.version }}" > RELEASE_NOTES.md
+          {
+            echo "body<<EOF"
+            cat RELEASE_NOTES.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload to CurseForge
+        if: steps.meta.outputs.exists == 'false' && env.CF_API_KEY != ''
+        uses: itsmeow/curseforge-upload@v3
+        with:
+          token: ${{ secrets.CF_API_KEY }}
+          project_id: ${{ vars.CF_PROJECT_ID }}
+          game_endpoint: wow
+          file_path: ${{ env.ZIP }}
+          game_versions: ${{ steps.meta.outputs.patch }}
+          release_type: release
+          display_name: EasyMountFarmer ${{ steps.meta.outputs.version }}
+          changelog: ${{ steps.notes.outputs.body }}
+          changelog_type: markdown
+
+      - name: Upload to Wago
+        if: steps.meta.outputs.exists == 'false' && env.WAGO_API_TOKEN != ''
+        run: bash scripts/upload-wago.sh "${{ env.ZIP }}" "${{ steps.meta.outputs.version }}" "${{ steps.meta.outputs.patch }}"
+        env:
+          WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
+
+      - name: GitHub Release (tag vX.Y.Z)
+        if: steps.meta.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.meta.outputs.version }}
+          name: EasyMountFarmer ${{ steps.meta.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          files: ${{ env.ZIP }}
