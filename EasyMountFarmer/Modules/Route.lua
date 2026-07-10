@@ -35,6 +35,14 @@ local EXP_IDX = {}
 for i, e in ipairs(EXPANSION_ORDER) do EXP_IDX[e] = i end
 ns.EXPANSION_ORDER = EXPANSION_ORDER
 
+-- World-drop sub-categories (open-world mounts, no lockout). Split so they can be
+-- filtered separately. They share reset/ordering behaviour (treated as "world").
+-- Defined up here because resetTypeFor / categoryEnabled below reference IS_WORLD.
+local WORLD_CATEGORIES = { "rare", "event", "vendor", "treasure", "achievement" }
+local IS_WORLD = {}
+for _, c in ipairs(WORLD_CATEGORIES) do IS_WORLD[c] = true end
+ns.WORLD_CATEGORIES = WORLD_CATEGORIES
+
 -- Difficulty scopes, by difficultyID (drives which Get/SetXDifficultyID to call).
 local DUNGEON_DIFF     = { [1] = true, [2] = true, [23] = true, [8] = true }
 local RAID_MODERN_DIFF = { [14] = true, [15] = true, [16] = true, [17] = true }
@@ -141,15 +149,9 @@ end
 -- ---------------------------------------------------------------------------
 -- category / expansion filter
 -- ---------------------------------------------------------------------------
--- World-drop sub-categories (open-world mounts, no lockout). Split so they can be
--- filtered separately. They share reset/ordering behaviour (treated as "world").
-local WORLD_CATEGORIES = { "rare", "event", "vendor", "treasure", "achievement" }
-local IS_WORLD = {}
-for _, c in ipairs(WORLD_CATEGORIES) do IS_WORLD[c] = true end
-ns.WORLD_CATEGORIES = WORLD_CATEGORIES
-
 -- Every filterable category. Default: instances/raids/world bosses/trash on; the
--- open-world sub-categories off (they are numerous and location-poor).
+-- open-world sub-categories (WORLD_CATEGORIES, defined near the top) off (they are
+-- numerous and location-poor).
 local ALL_CATEGORIES = { "dungeon", "raid", "worldboss", "trash",
   "rare", "event", "vendor", "treasure", "achievement" }
 ns.ALL_CATEGORIES = ALL_CATEGORIES

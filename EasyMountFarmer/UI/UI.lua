@@ -349,7 +349,7 @@ function UI.BuildFilterPanel()
   UI.filterPanel = p
   p:SetFrameStrata("DIALOG")
   p:SetWidth(FW)
-  p:SetPoint("TOPLEFT", UI.frame, "TOPRIGHT", 6, 0)
+  -- anchored on open by UI.PositionFilterPanel (left or right of the window)
   p:SetBackdrop(BD1)
   p:SetBackdropColor(C_BG[1], C_BG[2], C_BG[3], 0.98)
   p:SetBackdropBorderColor(C_BORDER[1], C_BORDER[2], C_BORDER[3], 1)
@@ -423,12 +423,29 @@ function UI.RefreshFilterRows()
   for _, r in ipairs(UI.filterRows or {}) do paintCheck(r.row, r.get()) end
 end
 
+--- Anchor the filter popup to whichever side of the window has room, so it stays on
+--- screen even when the main window is pushed against the right edge.
+function UI.PositionFilterPanel()
+  local p, f = UI.filterPanel, UI.frame
+  if not p or not f then return end
+  p:ClearAllPoints()
+  local right = f:GetRight()
+  local screenW = UIParent:GetWidth()
+  local panelW = p:GetWidth() or 190
+  if right and screenW and (screenW - right) >= (panelW + 10) then
+    p:SetPoint("TOPLEFT", f, "TOPRIGHT", 6, 0)      -- room on the right
+  else
+    p:SetPoint("TOPRIGHT", f, "TOPLEFT", -6, 0)     -- flip to the left
+  end
+end
+
 --- Toggle the filter popup open/closed (building it on first use).
 function UI.ToggleFilter()
   UI.BuildFilterPanel()
   if UI.filterPanel:IsShown() then
     UI.filterPanel:Hide()
   else
+    UI.PositionFilterPanel()
     UI.RefreshFilterRows()
     UI.filterPanel:Show()
   end
