@@ -29,17 +29,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # need tags to detect an already-released version
+          fetch-depth: 0     # need history + tags to detect an already-released version
+          fetch-tags: true
 
       - name: Resolve version + game patch
         id: meta
         run: |
+          git fetch --tags --force --quiet || true   # make sure existing tags are visible
           toc=EasyMountFarmer/EasyMountFarmer.toc
           v=$(grep -m1 '## Version:'   "$toc" | sed 's/.*:[[:space:]]*//' | tr -d '\r')
           iface=$(grep -m1 '## Interface:' "$toc" | sed 's/.*:[[:space:]]*//' | tr -d '\r')
           patch="$((10#$iface/10000)).$((10#$iface/100%100)).$((10#$iface%100))"
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "patch=$patch" >> "$GITHUB_OUTPUT"
+          # supported game versions (override with the GAME_VERSIONS repo variable)
+          versions="${{ vars.GAME_VERSIONS }}"
+          [ -n "$versions" ] || versions="12.0.1,12.0.5,12.0.7,12.1.0"
+          echo "versions=$versions" >> "$GITHUB_OUTPUT"
           if git rev-parse "v$v" >/dev/null 2>&1; then
             echo "exists=true"  >> "$GITHUB_OUTPUT"
             echo "Version v$v already tagged — nothing to publish."
@@ -78,7 +84,7 @@ jobs:
           project_id: ${{ vars.CF_PROJECT_ID }}
           game_endpoint: wow
           file_path: ${{ env.ZIP }}
-          game_versions: ${{ steps.meta.outputs.patch }}
+          game_versions: ${{ steps.meta.outputs.versions }}
           release_type: release
           display_name: EasyMountFarmer ${{ steps.meta.outputs.version }}
           changelog: ${{ steps.notes.outputs.body }}
@@ -86,7 +92,7 @@ jobs:
 
       - name: Upload to Wago
         if: steps.meta.outputs.exists == 'false' && env.WAGO_API_TOKEN != ''
-        run: bash scripts/upload-wago.sh "${{ env.ZIP }}" "${{ steps.meta.outputs.version }}" "${{ steps.meta.outputs.patch }}"
+        run: bash scripts/upload-wago.sh "${{ env.ZIP }}" "${{ steps.meta.outputs.version }}" "${{ steps.meta.outputs.versions }}"
         env:
           WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
 
