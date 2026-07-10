@@ -418,11 +418,11 @@ function UI.BuildFilterPanel()
   end
 
   sectionHeader(L["Show these categories"])
+  -- World-drop sub-categories (rare/event/vendor/treasure/achievement) are hidden for
+  -- now — re-add their rows here (and revert categoryEnabled in Route) to bring them back.
   local CATS = {
     { "dungeon", L["Dungeons"] }, { "raid", L["Raids"] }, { "worldboss", L["World bosses"] },
     { "trash", L["Trash drops"] },
-    { "rare", L["Rare enemies"] }, { "event", L["Seasonal events"] },
-    { "vendor", L["Vendors"] }, { "treasure", L["Treasures"] }, { "achievement", L["Achievements"] },
   }
   for _, c in ipairs(CATS) do
     local cat = c[1]

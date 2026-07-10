@@ -160,8 +160,11 @@ ns.ALL_CATEGORIES = ALL_CATEGORIES
 ---@param category string  the mount category
 ---@return boolean  true if the category is enabled
 local function categoryEnabled(category)
+  -- Open-world drops are hidden for now (data is kept, just not shown/filterable).
+  -- Remove this line + restore the filter rows in UI to bring them back.
+  if IS_WORLD[category] then return false end
   local f = ns.db and ns.db.filter
-  if not f or not f.categories then return not IS_WORLD[category] end
+  if not f or not f.categories then return true end
   return f.categories[category] == true
 end
 
