@@ -3,6 +3,19 @@
 All notable changes to EasyMountFarmer are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [0.2.2] - 2026-07-10
+
+### Changed
+- The filter now shows only **Dungeons, Raids, World bosses and Trash**. Open-world
+  drops (rare enemies / seasonal events / vendors / treasures) are hidden for now
+  (their data is kept and will come back later).
+
+### Fixed
+- The window no longer breaks its layout when you use Prev/Next **in combat** — it
+  holds updates during combat and reflows once combat ends.
+- **Closing the window now removes its waypoint arrow** (TomTom or the Blizzard pin),
+  and it is re-placed when you reopen the window.
+
 ## [0.2.1] - 2026-07-10
 
 ### Added
