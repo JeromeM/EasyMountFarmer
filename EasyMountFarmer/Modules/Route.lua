@@ -7,7 +7,9 @@ ns.Route = ns.Route or {}
 local Route = ns.Route
 local L = ns.L
 
--- Capital name for the faction, used in the "capital" breadcrumb entry.
+--- Return the localized faction capital name, used in the "capital" breadcrumb entry.
+---@param isAlliance boolean  true for Alliance, false for Horde
+---@return string  localized capital city name (Stormwind or Orgrimmar)
 local function CapitalName(isAlliance)
   return isAlliance and L["Stormwind"] or L["Orgrimmar"]
 end
@@ -72,8 +74,10 @@ ns.RouteHops = {
   ["Portal to Valdrakken"]                 = { v = "portal",     m = 2112 },
 }
 
--- Localize a breadcrumb label: game-resolved zone name when we have a map ID,
--- otherwise the hand translation / English.
+--- Localize a breadcrumb label: use the game-resolved zone name when we have a
+--- map ID, otherwise the hand translation / English fallback.
+---@param label string?  English travel-step label (key into ns.RouteHops)
+---@return string  localized label (empty string when label is nil)
 function ns.LocalizeHop(label)
   if not label then return "" end
   local h = ns.RouteHops[label]
@@ -86,7 +90,9 @@ function ns.LocalizeHop(label)
   return L[label]
 end
 
--- True if the mount (mount journal ID) is already collected.
+--- Report whether a mount is already collected.
+---@param id number?  mount journal ID
+---@return boolean  true if the mount is collected
 function Route.IsMountCollected(id)
   if not id then return false end
   local ok, isCollected = pcall(function()
@@ -97,8 +103,11 @@ end
 
 -- Set of every mount ID present in the route (to filter NEW_MOUNT_ADDED).
 local routeMountSet
+--- Populate routeMountSet with every boss/mount ID found in the route tree.
 local function BuildRouteMountSet()
   routeMountSet = {}
+  --- Recursively collect boss IDs from a list of route steps.
+  ---@param steps table  list of step tables (each may have bosses and/or nested steps)
   local function walk(steps)
     for _, step in ipairs(steps) do
       if step.bosses then
@@ -112,20 +121,28 @@ local function BuildRouteMountSet()
   if EasyMountFarmerRouteData then walk(EasyMountFarmerRouteData) end
 end
 
+--- Report whether a mount ID belongs to the route (lazily builds the set).
+---@param mountID number  mount journal ID
+---@return boolean  true if the mount appears anywhere in the route
 function Route.IsRouteMount(mountID)
   if not routeMountSet then BuildRouteMountSet() end
   return routeMountSet[mountID] == true
 end
 
--- Builds the flat, ordered list of targets.
--- A target = a run (leaf with bosses) that still has at least one uncollected
--- mount of the right faction. Fields: key, title, type, bosses (filtered),
--- breadcrumb (travel steps leading to the target).
+--- Build the flat, ordered list of farm targets.
+--- A target = a run (leaf with bosses) that still has at least one uncollected
+--- mount of the right faction. Fields: key, title, type, bosses (filtered),
+--- breadcrumb (travel steps leading to the target).
+---@return table  ordered list of target tables
 function Route.BuildTargets()
   local faction = UnitFactionGroup("player")
   local isAlliance = (faction == "Alliance")
   local targets = {}
 
+  --- Return a shallow copy of a breadcrumb trail, optionally appending an entry.
+  ---@param trail table  existing breadcrumb entries
+  ---@param entry table?  entry to append to the copy
+  ---@return table  new trail table
   local function copyTrail(trail, entry)
     local t = {}
     for i = 1, #trail do t[i] = trail[i] end
@@ -133,6 +150,10 @@ function Route.BuildTargets()
     return t
   end
 
+  --- Decide whether a boss still needs farming: has an ID, mount uncollected,
+  --- and available to the player's faction (neutral bosses always count).
+  ---@param b table  boss entry (ID, isAlliance, isHorde)
+  ---@return boolean  true if the boss should be kept as a target
   local function needBoss(b)
     if not b.ID then return false end
     if Route.IsMountCollected(b.ID) then return false end
@@ -143,6 +164,10 @@ function Route.BuildTargets()
     return true
   end
 
+  --- Recursively descend the route tree, emitting a target for each leaf that
+  --- has needed bosses and extending the breadcrumb trail for nested steps.
+  ---@param steps table  list of step tables to process
+  ---@param trail table  breadcrumb entries accumulated so far
   local function walk(steps, trail)
     for _, step in ipairs(steps) do
       if step.bosses then
@@ -177,7 +202,9 @@ function Route.BuildTargets()
   return targets
 end
 
--- Total number of mounts still to farm (across all targets, ignoring lockouts).
+--- Count the mounts still to farm across all targets (ignoring lockouts).
+---@param targets table  list of target tables (each with a bosses list)
+---@return number  total number of uncollected mounts
 function Route.CountRemainingMounts(targets)
   local n = 0
   for _, t in ipairs(targets) do n = n + #t.bosses end

@@ -10,12 +10,17 @@ local ADDON, ns = ...
 ns.Nav = ns.Nav or {}
 local Nav = ns.Nav
 
+--- Whether turn-by-turn navigation is available (FarstriderLib present).
+---@return boolean  true when FarstriderLib's routing API is loaded
 function Nav.Available()
   return (FarstriderLib_API and FarstriderLib_API.FindTrailTo) and true or false
 end
 
--- Render navigation toward the target's entrance. Returns true if handled
--- (FarstriderLib present); false to let the caller fall back to a simple arrow.
+--- Render navigation toward the target's entrance: show a clickable action for
+--- an action step, or a waypoint arrow for a travel step. Re-routes from the
+--- player's current position each call so it reflects the next hop.
+---@param target table  run entry with key and title fields
+---@return boolean  true if handled (FarstriderLib present); false to fall back to a simple arrow
 function Nav.Update(target)
   if not Nav.Available() then return false end
   -- Effective entrance: live from the Encounter Journal when the run's portal

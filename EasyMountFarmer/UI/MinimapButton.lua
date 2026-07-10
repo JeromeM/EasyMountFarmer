@@ -8,12 +8,16 @@ local L = ns.L
 
 local RADIUS = 80
 
+--- Place the button on the minimap ring at its saved angle.
+---@param btn table  the minimap Button frame to reposition
 local function updatePosition(btn)
   local angle = math.rad((ns.db.minimap and ns.db.minimap.angle) or 200)
   btn:ClearAllPoints()
   btn:SetPoint("CENTER", _G.Minimap, "CENTER", math.cos(angle) * RADIUS, math.sin(angle) * RADIUS)
 end
 
+--- Create the minimap button once and wire up its icon, click, drag and tooltip
+--- handlers; no-op if the button already exists. Starts hidden if so configured.
 function Minimap.Init()
   if Minimap.button then return end
   ns.db.minimap = ns.db.minimap or {}

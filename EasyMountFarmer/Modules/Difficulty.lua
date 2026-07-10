@@ -25,18 +25,28 @@ local SETTERS = {
   legacyRaid = "SetLegacyRaidDifficultyID",
 }
 
+--- Look up the Locations entry for a target.
+---@param target table?  a target from ns.allTargets (uses its `key` field)
+---@return table?  the matching EasyMountFarmerLocations entry, or nil if none
 local function locFor(target)
   if not target then return nil end
   return (EasyMountFarmerLocations or {})[target.key]
 end
 
+--- Get the player's current difficulty ID for a given scope.
+---@param scope string?  difficulty scope: "dungeon", "raid" or "legacyRaid"
+---@return number?  current difficultyID, or nil if the scope is unknown
 function Difficulty.GetCurrent(scope)
   local fn = _G[GETTERS[scope or ""] or ""]
   if fn then return fn() end
   return nil
 end
 
--- Should we offer a difficulty switch for this target?
+--- Report whether we should offer a difficulty switch for this target, i.e. the
+--- current difficulty differs from the target's required one. A Mythic Keystone
+--- (8) also satisfies a Mythic (23) dungeon requirement.
+---@param target table  a target from ns.allTargets
+---@return boolean  true if a switch to the required difficulty is needed
 function Difficulty.NeedsSwitch(target)
   local l = locFor(target)
   if not l or not l.reqDiff or not l.diffScope then return false end
@@ -47,13 +57,21 @@ function Difficulty.NeedsSwitch(target)
   return true
 end
 
--- Button text, e.g. "Switch to Mythic".
+--- Build the button label for switching a target to its required difficulty,
+--- e.g. "Switch to Mythic".
+---@param target table  a target from ns.allTargets
+---@return string  localized button text
 function Difficulty.SwitchLabel(target)
   local l = locFor(target)
   if not l or not l.reqDiff then return L["Difficulty"] end
   return string.format(L["Switch to %s"], DIFF_LABEL[l.reqDiff] or tostring(l.reqDiff))
 end
 
+--- Switch the relevant difficulty to the one required by the target. Aborts in
+--- combat, prints a message if the change fails (party leader required, or
+--- already inside the instance), then refreshes the UI. The change is applied
+--- asynchronously by the client.
+---@param target table  a target from ns.allTargets
 function Difficulty.SwitchTo(target)
   local l = locFor(target)
   if not l or not l.reqDiff or not l.diffScope then return end

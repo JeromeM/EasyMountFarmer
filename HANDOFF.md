@@ -91,6 +91,18 @@ Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Waypoint, Navig
 - **FarstriderLib** covers most zones (incl. Zuldazar). If `Update` shows nothing, it's usually the run being an **undetected
   lockout** (missing instanceId) — the addon was guiding to already-done instances. FarstriderLib IS faction-aware (its
   connections are guarded by `UnitFactionGroup("player")`) and only routes to the destination coord we pass to `FindTrailTo`.
+- **FarstriderLib can return an unusable enemy-faction route** (its bug, not ours). `FindTrailTo` has **no faction param** —
+  FarstriderLib reads `UnitFactionGroup` itself. CONFIRMED via `/emf route` for an **Alliance** player → **Utgarde Pinnacle**
+  (Northrend): it returns a 3-hop chain of Horde Undercity zeppelins ("Grom'gol → Ruins of Lordaeron → Howling Fjord"), all
+  `actions=[]` (pure travel it chose itself), which Alliance can't even take. The Kirin Tor ring (44935) was owned/usable/off
+  cooldown (verified with the `/emf route` item dump) — FarstriderLib still won't use it, because the ring lands you in **Dalaran
+  (Crystalsong)** and its graph **can't complete Dalaran → Howling Fjord**, so it picks the cheaper direct-but-Horde chain. Our
+  request is byte-identical to before the rename → provably not us. **Decision (user): do NOT build any workaround** — we use
+  FarstriderLib and nothing else. This is a FarstriderLib bug, **reported upstream via a GitHub ticket**; the fix belongs there.
+  Two dead-ends were tried and fully reverted (don't revisit): (1) `skipRouterFor` = plain-arrow fallback — the entrance arrow is
+  useless off-continent; (2) a `gateway`/`GATEWAYS` mini-router offering the Kirin Tor ring button — rejected as a bespoke nav
+  system for one case. Nav.lua stays pure FarstriderLib. Diagnostic kept: **`/emf route`** dumps FarstriderLib's chosen steps +
+  your Kirin Tor/Dalaran item usability (handy for the upstream ticket).
 - **Moving instance entrances** (e.g. **Ny'alotha**, whose raid portal follows the weekly N'Zoth assault between the Vale of
   Eternal Blossoms `1530` and Uldum `1527`): the game's **`C_EncounterJournal.GetDungeonEntrancesForMap(uiMapID)`** lists an
   instance's entrance **only on the map where the portal physically is that week** (confirmed: `/emf entrance` in the Vale shows

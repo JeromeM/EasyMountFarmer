@@ -4,6 +4,8 @@
 local ADDON, ns = ...
 local L = ns.L
 
+--- Create the saved-variable tables if missing and seed their default fields
+--- (minimap position, feature toggles, per-character run progress).
 local function initSavedVars()
   EasyMountFarmerDB = EasyMountFarmerDB or {}
   EasyMountFarmerCharDB = EasyMountFarmerCharDB or {}
@@ -21,9 +23,9 @@ local function initSavedVars()
   ns.charDB.currentIdx = ns.charDB.currentIdx or 1
 end
 
--- One-time import of settings/progress from the previous addon name (SAMounts).
--- Runs at PLAYER_LOGIN, when both addons' saved vars are loaded if the old folder
--- is still installed during the transition. Persistent flag stops it re-running.
+--- One-time import of settings/progress from the previous addon name (SAMounts).
+--- Runs at PLAYER_LOGIN, when both addons' saved vars are loaded if the old folder
+--- is still installed during the transition. A persistent flag stops it re-running.
 local function importOldSavedVars()
   if ns.db.importedFromSAMounts then return end
   ns.db.importedFromSAMounts = true
@@ -35,6 +37,8 @@ local function importOldSavedVars()
   end
 end
 
+--- PLAYER_LOGIN handler: import legacy data, build the UI and minimap button,
+--- compute reset state, position the step pointer, and restore window visibility.
 local function onLogin()
   importOldSavedVars()
   ns.UI.Init()
@@ -72,26 +76,36 @@ end)
 -- --- slash commands -------------------------------------------------------
 SLASH_EASYMOUNTFARMER1 = "/easymountfarmer"
 SLASH_EASYMOUNTFARMER2 = "/emf"
+--- Dispatch a /easymountfarmer (/emf) slash command; with no argument it toggles
+--- the main window, otherwise it runs the matching sub-command or diagnostic dump.
+---@param msg string?  raw command text after the slash (trimmed and lower-cased)
 SlashCmdList.EASYMOUNTFARMER = function(msg)
   msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+
   if msg == "next" then
     ns.Progress.Next()
+
   elseif msg == "prev" or msg == "previous" then
     ns.Progress.Prev()
+
   elseif msg == "guide" then
     ns.Waypoint.GuideTo(ns.Progress.Current())
+
   elseif msg == "reset" then
     ns.Progress.ResetAllDone()
     ns.Print(L["Re-synced to the first step to do."])
+
   elseif msg == "minimap" then
     ns.db.minimap.hide = not ns.db.minimap.hide
     if ns.Minimap.button then
       ns.Minimap.button:SetShown(not ns.db.minimap.hide)
     end
+
   elseif msg == "arrow" then
     ns.db.autoGuide = not ns.db.autoGuide
     ns.Print(ns.db.autoGuide and L["Auto waypoint arrow: ON"] or L["Auto waypoint arrow: OFF"])
     if ns.db.autoGuide and ns.UI then ns.UI.lastGuidedKey = nil; ns.UI.Refresh() end
+
   elseif msg == "debug" then
     -- diagnostics: what the client actually reports as saved instances
     RequestRaidInfo()
@@ -108,11 +122,13 @@ SlashCmdList.EASYMOUNTFARMER = function(msg)
       ns.Print("current step: " .. tostring(cur.key))
       print("  expected lockout string = |cffffff00" .. tostring(l and l.lockout) .. "|r (must match a name above to auto-skip)")
     end
+
   elseif msg == "mapid" then
     -- report the current zone's UiMapID + localized name (to fill RouteHops)
     local id = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
     local info = id and C_Map.GetMapInfo(id)
     ns.Print(string.format("UiMapID = |cffffff00%s|r  (%s)", tostring(id), info and info.name or "?"))
+
   elseif msg == "nav" then
     local cur = ns.Progress.Current()
     ns.Print(string.format("FarstriderLib=%s | inInstance=%s | autoGuide=%s",
@@ -121,10 +137,12 @@ SlashCmdList.EASYMOUNTFARMER = function(msg)
     ns.Print(string.format("cur=%s | done=%s | Travel.active=%s | hint=%s",
       tostring(cur and cur.key), tostring(cur and ns.Progress.IsDone(cur.key)),
       tostring(ns.Travel and ns.Travel.active), tostring(ns.leaveInstanceHint)))
+
   elseif msg == "enc" then
     ns.db.encDebug = not ns.db.encDebug
     ns.Print("encounter debug: " .. (ns.db.encDebug and "ON" or "OFF")
       .. " — kill the mount boss and note the id.")
+
   elseif msg == "entrance" then
     -- the game's own source of truth for instance entrances on the current map
     -- (this is what FarstriderLib routes to). Stand in the zone that holds the
@@ -146,6 +164,46 @@ SlashCmdList.EASYMOUNTFARMER = function(msg)
       print(string.format("  |cffffff00%s|r  jID=%s  map=%d x=%.1f y=%.1f",
         tostring(e.name), tostring(e.journalInstanceID), mapId, (x or 0) * 100, (y or 0) * 100))
     end
+
+  elseif msg == "route" then
+    -- dump what FarstriderLib actually returns for the current step (to see
+    -- whether it picks the ring/toy action or a portal, and why).
+    local cur = ns.Progress.Current()
+    if not cur then ns.Print("no current step."); return end
+    local map, x, y = ns.EntranceFor(cur.key)
+    if not map then ns.Print("no coords for " .. tostring(cur.key)); return end
+    ns.Print(string.format("route to |cffffff00%s|r (map %d, %.1f/%.1f):", tostring(cur.key), map, x, y))
+    if not (FarstriderLib_API and FarstriderLib_API.FindTrailTo) then ns.Print("  FarstriderLib not available."); return end
+    local ok, op = pcall(FarstriderLib_API.FindTrailTo, map, x / 100, y / 100, 0)
+    if not ok or type(op) ~= "table" or #op == 0 then ns.Print("  no route returned."); return end
+    for i = 1, math.min(#op, 6) do
+      local s = op[i]
+      local acts = {}
+      if s.actionOptions then
+        for _, o in ipairs(s.actionOptions) do acts[#acts + 1] = tostring(o.type) .. ":" .. tostring(o.data) end
+      end
+      print(string.format("  %d) |cffffff00%s|r  actions=[%s]", i, tostring(s.loca), table.concat(acts, ", ")))
+    end
+    -- why FarstriderLib may skip the ring: what the game reports for the Kirin Tor
+    -- / Dalaran teleport items you own (count / usable / cooldown).
+    ns.Print("Kirin Tor / Dalaran items owned:")
+    local ids = { 40585, 40586, 44934, 44935, 45688, 45689, 45690, 45691,
+                  48954, 48955, 48956, 48957, 51557, 51558, 51559, 51560, 139599, 140192 }
+    local any = false
+    for _, id in ipairs(ids) do
+      local cnt = C_Item and C_Item.GetItemCount and C_Item.GetItemCount(id) or 0
+      if cnt and cnt > 0 then
+        any = true
+        local usable = C_Item.IsUsableItem and C_Item.IsUsableItem(id)
+        local start, dur = 0, 0
+        if C_Item.GetItemCooldown then start, dur = C_Item.GetItemCooldown(id) end
+        local cd = (dur and dur > 0) and (dur - (GetTime() - (start or 0))) or 0
+        print(string.format("  %s (%d): count=%d usable=%s cd=%.0fs",
+          tostring(C_Item.GetItemInfo(id) or id), id, cnt, tostring(usable), cd))
+      end
+    end
+    if not any then print("  (none detected in bags/equipped — this is likely why the ring is skipped)") end
+
   elseif msg == "help" then
     ns.Print(L["Commands:"])
     print("  " .. L["/emf — open/close the window"])
@@ -156,6 +214,7 @@ SlashCmdList.EASYMOUNTFARMER = function(msg)
     print("  " .. L["/emf arrow — toggle the auto waypoint arrow"])
     print("  " .. L["/emf debug — show saved-instance diagnostics"])
     print("  " .. L["/emf entrance — list instance entrances on this map"])
+
   else
     ns.UI.Toggle()
   end

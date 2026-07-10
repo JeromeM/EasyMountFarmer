@@ -17,22 +17,37 @@ local pending             -- attributes to apply out of combat: { kind, id }
 local pendingShow         -- show state to apply out of combat (true/false/nil)
 
 -- --- localized name / icon resolution -------------------------------------
+--- Get the localized item name, requesting item data if not yet cached.
+---@param id number  item ID
+---@return string?  localized item name, or nil if not yet available
 local function itemName(id)
   if C_Item and C_Item.RequestLoadItemDataByID then pcall(C_Item.RequestLoadItemDataByID, id) end
   return C_Item and C_Item.GetItemInfo and (C_Item.GetItemInfo(id))
 end
+--- Get the localized spell name.
+---@param id number  spell ID
+---@return string?  localized spell name, or nil if unavailable
 local function spellName(id)
   local info = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(id)
   return info and info.name
 end
+--- Get the icon texture (fileID) for an item.
+---@param id number  item ID
+---@return number?  icon fileID, or nil if unavailable
 local function itemIcon(id)
   return C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(id)
 end
+--- Get the icon texture (fileID) for a spell.
+---@param id number  spell ID
+---@return number?  icon fileID, or nil if unavailable
 local function spellIcon(id)
   return C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(id)
 end
 
--- Build the secure button once, docked (anchored) inside the given panel frame.
+--- Build the secure action button once, docked (anchored) inside the given panel
+--- frame. Returns the already-built button on subsequent calls.
+---@param anchorTo table  frame the button anchors its LEFT edge to
+---@return table  the secure Button frame
 function Travel.Ensure(anchorTo)
   if Travel.button then return Travel.button end
   local btn = CreateFrame("Button", "EasyMountFarmerActionButton", UIParent,
@@ -73,6 +88,9 @@ function Travel.Ensure(anchorTo)
   return btn
 end
 
+--- Apply the secure-cast attributes to the button for the given action.
+---@param kind string  "spell", "item", or "toy"
+---@param id number  spell ID (for "spell") or item ID (for "item"/"toy")
 local function applyAttributes(kind, id)
   local btn = Travel.button
   if not btn then return end
@@ -86,8 +104,11 @@ local function applyAttributes(kind, id)
   btn.actionKind, btn.actionId = kind, id
 end
 
--- Show a clickable action. kind = "item" | "toy" | "spell".
--- labelOverride replaces the default "Use <name>" label when given.
+--- Show a clickable action button for the current travel step. Defers attribute
+--- and visibility changes until out of combat when in a combat lockdown.
+---@param kind string  "item", "toy", or "spell"
+---@param id number  spell ID (for "spell") or item ID (for "item"/"toy")
+---@param labelOverride string?  replaces the default "Use <name>" panel label
 function Travel.ShowAction(kind, id, labelOverride)
   Travel.active = true
   if labelOverride then
@@ -110,6 +131,7 @@ function Travel.ShowAction(kind, id, labelOverride)
   if Travel.button then Travel.button:Show() end
 end
 
+--- Hide the action button, deferring the change until out of combat if needed.
 function Travel.Hide()
   Travel.active = false
   if not Travel.button then return end

@@ -5,6 +5,11 @@ local ADDON, ns = ...
 ns.Lockouts = ns.Lockouts or {}
 local Lockouts = ns.Lockouts
 
+--- Scan the player's saved instances and lock-mark matching farm runs as done.
+--- Matches saved instances by stable instanceId first, then by English lockout
+--- name as a fallback. Never lock-marks the instance we are currently inside
+--- (and clears any stale lock-mark left on it). Rebuilds progress if anything
+--- changed.
 function Lockouts.Scan()
   if not ns.charDB or not ns.Progress then return end
   local loc = EasyMountFarmerLocations or {}

@@ -21,6 +21,8 @@ local DAY = 86400
 local WEEK = 7 * 86400
 
 -- --- time until reset (native API, defensive fallbacks) --------------------
+--- Return the number of seconds until the daily reset (native API, with fallbacks).
+---@return number  seconds until the next daily reset
 function Progress.SecondsUntilDaily()
   if C_DateAndTime and C_DateAndTime.GetSecondsUntilDailyReset then
     return C_DateAndTime.GetSecondsUntilDailyReset()
@@ -28,6 +30,8 @@ function Progress.SecondsUntilDaily()
   return (GetQuestResetTime and GetQuestResetTime()) or DAY
 end
 
+--- Return the number of seconds until the weekly reset (native API, with fallback).
+---@return number  seconds until the next weekly reset
 function Progress.SecondsUntilWeekly()
   if C_DateAndTime and C_DateAndTime.GetSecondsUntilWeeklyReset then
     return C_DateAndTime.GetSecondsUntilWeeklyReset()
@@ -35,9 +39,11 @@ function Progress.SecondsUntilWeekly()
   return WEEK
 end
 
--- Is this run already completed this reset according to its tracking quest
--- (world bosses, and anything with a questId in Locations)? Checked live so it
--- clears itself automatically at reset.
+--- Report whether a run is completed this reset via its tracking quest flag
+--- (world bosses, and anything with a questId in Locations). Checked live so it
+--- clears itself automatically at reset.
+---@param key string  target key (index into EasyMountFarmerLocations)
+---@return boolean  true if the tracking quest is flagged completed
 function Progress.IsDoneByQuest(key)
   local l = (EasyMountFarmerLocations or {})[key]
   local q = l and l.questId
@@ -48,7 +54,9 @@ function Progress.IsDoneByQuest(key)
   return false
 end
 
--- Is a doneRun still valid (not yet reset)?
+--- Report whether a stored doneRun is still valid (i.e. its reset has not passed).
+---@param entry table?  doneRun entry with `at` timestamp and `type`
+---@return boolean  true if the entry is still within the current reset window
 function Progress.IsDoneValid(entry)
   if not entry or not entry.at then return false end
   local now = time()
@@ -58,7 +66,9 @@ function Progress.IsDoneValid(entry)
   return entry.at >= (now + Progress.SecondsUntilWeekly() - WEEK)
 end
 
--- Is this step done for the current reset (quest flag OR a still-valid doneRun)?
+--- Report whether a step is done for the current reset (quest flag OR a still-valid doneRun).
+---@param key string?  target key
+---@return boolean  true if the step is done this reset
 function Progress.IsDone(key)
   if not key then return false end
   if Progress.IsDoneByQuest(key) then return true end
@@ -67,10 +77,14 @@ function Progress.IsDone(key)
 end
 
 -- --- access ---------------------------------------------------------------
+--- Return the list of active targets (uncollected mounts, done ones included).
+---@return table  active targets list (empty table when none)
 function Progress.Active()
   return ns.activeTargets or {}
 end
 
+--- Return the currently pointed-to target, or nil when there are none.
+---@return table?  the current target, or nil if the list is empty
 function Progress.Current()
   local a = ns.activeTargets
   if not a or #a == 0 then return nil end
@@ -78,11 +92,14 @@ function Progress.Current()
   return a[idx]
 end
 
+--- Return the current pointer index (defaults to 1).
+---@return number  current target index
 function Progress.Index()
   return (ns.charDB and ns.charDB.currentIdx) or 1
 end
 
--- Is at least one step still to do this reset?
+--- Report whether at least one step is still to do this reset.
+---@return boolean  true if any active target is not done
 function Progress.AnyUndone()
   for _, t in ipairs(ns.activeTargets or {}) do
     if not Progress.IsDone(t.key) then return true end
@@ -90,13 +107,15 @@ function Progress.AnyUndone()
   return false
 end
 
--- Auto-follow is active only when the user hasn't manually navigated AND the
--- "auto-advance" preference is on.
+--- Report whether auto-follow is active: only when the user hasn't manually
+--- navigated AND the "auto-advance" preference is on.
+---@return boolean  true if the pointer should auto-snap to the next step
 function Progress.AutoFollowing()
   return (not ns.db or ns.db.autoAdvance ~= false) and ns.autoFollow
 end
 
--- Index of the first not-done step; if all are done, keep the current index.
+--- Return the index of the first not-done step; if all are done, keep the current index.
+---@return number  index of the first undone target (clamped to the list bounds)
 function Progress.FirstUndoneIndex()
   local a = ns.activeTargets or {}
   for i, t in ipairs(a) do
@@ -109,7 +128,9 @@ function Progress.FirstUndoneIndex()
 end
 
 -- --- rebuild --------------------------------------------------------------
--- resetPointer=true re-enables auto-follow (used on resets / manual reset).
+--- Rebuild the active targets list and reposition the pointer, refreshing the UI.
+--- resetPointer=true re-enables auto-follow (used on resets / manual reset).
+---@param resetPointer boolean?  when true, re-enable auto-follow before rebuilding
 function Progress.Rebuild(resetPointer)
   if resetPointer then ns.autoFollow = true end
   local prevKey = Progress.Current() and Progress.Current().key or nil
@@ -148,8 +169,9 @@ function Progress.Rebuild(resetPointer)
 end
 
 -- --- navigation -----------------------------------------------------------
--- Manual navigation turns auto-follow OFF so the pointer stays where the user
--- put it (they can review done steps); it re-enables on reset / login.
+--- Move the pointer to the next target. Manual navigation turns auto-follow OFF
+--- so the pointer stays where the user put it (they can review done steps); it
+--- re-enables on reset / login.
 function Progress.Next()
   local n = #(ns.activeTargets or {})
   if n == 0 then return end
@@ -158,6 +180,7 @@ function Progress.Next()
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end
 
+--- Move the pointer to the previous target (turns auto-follow off; see Next).
 function Progress.Prev()
   local n = #(ns.activeTargets or {})
   if n == 0 then return end
@@ -166,7 +189,7 @@ function Progress.Prev()
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end
 
--- Re-enable auto-follow and jump to the first step still to do.
+--- Re-enable auto-follow and jump to the first step still to do, refreshing the UI.
 function Progress.ResetPointer()
   ns.autoFollow = true
   local n = #(ns.activeTargets or {})
@@ -174,10 +197,10 @@ function Progress.ResetPointer()
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end
 
--- Mark a run done for this reset (auto-advance / detected lockout). While
--- auto-following, Rebuild re-snaps the pointer to the next step to do.
--- Move the pointer forward to the next not-done step (wrapping once), or stay
--- put if everything is done this reset.
+--- Move the pointer forward to the next not-done step (wrapping around once), or
+--- stay put if everything is done this reset. Used for auto-advance after a
+--- detected kill/lockout; while auto-following, Rebuild already re-snaps the
+--- pointer, so this handles the manual-navigation case.
 function Progress.AdvanceToNextUndone()
   local a = ns.activeTargets or {}
   local n = #a
@@ -200,13 +223,22 @@ function Progress.AdvanceToNextUndone()
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end
 
--- Reset cadence for a run: mythic dungeons lock WEEKLY (like raids), not daily.
+--- Return the reset cadence type for a run: mythic dungeons lock WEEKLY (like
+--- raids), not daily.
+---@param key string  target key (index into EasyMountFarmerLocations)
+---@param ptype string?  fallback reset type when no special rule applies
+---@return string  reset type ("WeeklyDungeon", the given ptype, or "Raid")
 function Progress.ResetTypeFor(key, ptype)
   local l = (EasyMountFarmerLocations or {})[key]
   if l and l.diffScope == "dungeon" and l.reqDiff == 23 then return "WeeklyDungeon" end
   return ptype or "Raid"
 end
 
+--- Mark a run done for this reset, then rebuild and (when appropriate) advance
+--- the pointer. Sets a "leave instance" hint when a boss is killed while inside.
+---@param key string?  target key to mark done
+---@param ptype string?  reset type hint passed to ResetTypeFor
+---@param source string?  how it was marked done ("kill", "manual", ...; defaults to "kill")
 function Progress.MarkDone(key, ptype, source)
   if not key then return end
   local cur = Progress.Current()
@@ -225,11 +257,11 @@ function Progress.MarkDone(key, ptype, source)
   end
 end
 
--- Re-sync (slash / minimap): back to auto-follow and jump to the first step
--- still to do. We do NOT wipe detected progress -- doneRuns is persistent, and
--- some kills (e.g. heroic dungeons) only re-detect on a zone change, so wiping
--- would briefly lose them and stall the pointer. A background raid-info refresh
--- catches anything newly locked.
+--- Re-sync (slash / minimap): return to auto-follow and jump to the first step
+--- still to do. Does NOT wipe detected progress -- doneRuns is persistent, and
+--- some kills (e.g. heroic dungeons) only re-detect on a zone change, so wiping
+--- would briefly lose them and stall the pointer. A background raid-info refresh
+--- catches anything newly locked.
 function Progress.ResetAllDone()
   ns.autoFollow = true
   if RequestRaidInfo then RequestRaidInfo() end
@@ -237,8 +269,8 @@ function Progress.ResetAllDone()
 end
 
 -- --- reset handling -------------------------------------------------------
--- Call on login, on PLAYER_ENTERING_WORLD, and periodically. Purges stale
--- doneRuns and, if a reset boundary was crossed, re-enables auto-follow.
+--- Purge stale doneRuns and, if a reset boundary was crossed, re-enable
+--- auto-follow via Rebuild. Call on login, on PLAYER_ENTERING_WORLD, and periodically.
 function Progress.CheckResets()
   local db = ns.charDB
   db.doneRuns = db.doneRuns or {}

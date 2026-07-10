@@ -44,7 +44,9 @@ local BD1 = {
 -- localization helpers (resolve names from IDs / the game's source text)
 -- ---------------------------------------------------------------------------
 
--- Localized mount name from its journal id; falls back to the stored name.
+--- Resolve the localized mount name from its journal id; falls back to the stored name.
+---@param boss table  a mount/boss entry (has .ID journal id and .mount fallback name)
+---@return string  the localized mount name, or "?" if unknown
 local function mountName(boss)
   if boss.ID and C_MountJournal and C_MountJournal.GetMountInfoByID then
     local ok, name = pcall(C_MountJournal.GetMountInfoByID, boss.ID)
@@ -53,9 +55,11 @@ local function mountName(boss)
   return boss.mount or "?"
 end
 
--- The mount's localized source text is a few lines separated by "|n" (WoW's
--- newline token) or real newlines, e.g. "Drop: <boss>|n<instance>|n<expansion>".
--- Return an array of trimmed, non-empty lines (or nil).
+--- Split a mount's localized source text into its individual lines. The source is
+--- a few lines separated by "|n" (WoW's newline token) or real newlines, e.g.
+--- "Drop: <boss>|n<instance>|n<expansion>"; color codes and inline textures are stripped.
+---@param mountID number  the mount journal id
+---@return string[]? lines  trimmed, non-empty source lines, or nil if unavailable
 local function sourceLines(mountID)
   if not (mountID and C_MountJournal and C_MountJournal.GetMountInfoExtraByID) then return end
   local ok, _, _, source = pcall(C_MountJournal.GetMountInfoExtraByID, mountID)
@@ -71,8 +75,10 @@ local function sourceLines(mountID)
   return lines
 end
 
--- Strip a leading localized label ("Drop:", "Butin :", "Région :", ...) and a
--- trailing "(difficulty)" parenthetical, keeping the meaningful name.
+--- Strip a leading localized label ("Drop:", "Butin :", "Région :", ...) and a
+--- trailing "(difficulty)" parenthetical, keeping the meaningful name.
+---@param s string?  a raw source line
+---@return string?  the cleaned name, or nil if empty/nil
 local function stripLabel(s)
   if not s then return nil end
   s = s:gsub("%s*%b()%s*$", "")           -- trailing "(mythic)" etc.
@@ -82,7 +88,9 @@ local function stripLabel(s)
   return (s ~= "" and s) or nil
 end
 
--- Uppercase the first letter (only when it is an ASCII a-z, to stay UTF-8 safe).
+--- Uppercase the first letter (only when it is an ASCII a-z, to stay UTF-8 safe).
+---@param s string?  the input string
+---@return string?  the string with its first letter capitalized (unchanged if non-ASCII/empty/nil)
 local function capitalize(s)
   if not s or s == "" then return s end
   local b = s:byte(1)
@@ -92,7 +100,10 @@ local function capitalize(s)
   return s
 end
 
--- Localized boss name for a mount (first source line), or nil.
+--- Resolve the localized boss name for a mount from its first source line,
+--- falling back to the stored boss name.
+---@param boss table  a mount/boss entry (has .ID journal id and .name fallback)
+---@return string?  the localized boss name, or nil if unknown
 local function bossName(boss)
   local lines = sourceLines(boss.ID)
   local b = lines and lines[1] and stripLabel(lines[1])
@@ -100,7 +111,10 @@ local function bossName(boss)
   return (boss.name and boss.name ~= "" and boss.name) or nil
 end
 
--- Clean the English run title as a fallback: "Run Freehold (Dungeon)" -> "Freehold".
+--- Clean the English run title for use as a fallback name:
+--- "Run Freehold (Dungeon)" -> "Freehold".
+---@param title string?  the raw run title
+---@return string  the cleaned title, or "?" if nil
 local function cleanTitle(title)
   if not title then return "?" end
   title = title:gsub("^Run%s+", "")
@@ -108,9 +122,11 @@ local function cleanTitle(title)
   return title
 end
 
--- Localized instance name for a target. Priority: an explicit locale override
--- for the cleaned title (for cases the game's source text doesn't resolve), then
--- the first mount's 2nd source line, then the cleaned English run title.
+--- Resolve the localized instance name for a target. Priority: an explicit locale
+--- override for the cleaned title (for cases the game's source text doesn't resolve),
+--- then the first mount's 2nd source line, then the cleaned English run title.
+---@param target table  a farm target (has .title and .bosses)
+---@return string  the localized instance name
 local function instanceName(target)
   local clean = cleanTitle(target.title)
   local tr = L[clean]
@@ -126,7 +142,11 @@ local function instanceName(target)
   return clean
 end
 
--- Localized headline split into (action line, name line). action may be nil.
+--- Build the localized headline for a target, split into an action line and a name line.
+--- Handles world bosses (kill the boss), dungeons, and raids; other types have no action.
+---@param target table  a farm target (has .key, .type, .title, .bosses)
+---@return string? action  the localized action line (e.g. "Do the dungeon"), or nil
+---@return string name  the localized, capitalized target name
 local function targetParts(target)
   local l = (EasyMountFarmerLocations or {})[target.key]
   if l and l.questId then
@@ -142,7 +162,10 @@ local function targetParts(target)
   return nil, inst
 end
 
--- Localized required-difficulty label (via the game), or nil if not worth a badge.
+--- Resolve the localized required-difficulty label for a target via the game.
+---@param target table  a farm target (has .key)
+---@return string? name  the localized difficulty name, or nil if not worth a badge
+---@return boolean? isMythic  true when the required difficulty is a Mythic tier
 local function diffBadge(target)
   local l = (EasyMountFarmerLocations or {})[target.key]
   if not l or not l.reqDiff or NORMAL_DIFFS[l.reqDiff] then return nil end
@@ -153,7 +176,9 @@ local function diffBadge(target)
   return nil
 end
 
--- Format a duration in seconds as "Xd Yh" / "Xh Ym" / "Xm".
+--- Format a duration in seconds as "Xd Yh" / "Xh Ym" / "Xm".
+---@param s number?  a duration in seconds (clamped to >= 0)
+---@return string  the human-readable duration
 function UI.Dur(s)
   s = math.max(0, math.floor(s or 0))
   local d = math.floor(s / 86400); s = s % 86400
@@ -173,6 +198,9 @@ local BTN_COLORS = {
   nav     = { bg = {0.15,0.15,0.18}, hov = {0.22,0.22,0.27}, brd = {0.30,0.30,0.36}, tx = {0.86,0.86,0.90} },
 }
 
+--- Repaint a flat button to reflect its kind and enabled/hover state.
+---@param b Frame  a button created by makeButton (has ._kind and .label)
+---@param hover boolean  true to use the hover colors
 local function paint(b, hover)
   local c = BTN_COLORS[b._kind] or BTN_COLORS.nav
   local on = b:IsEnabled()
@@ -183,11 +211,19 @@ local function paint(b, hover)
   b.label:SetTextColor(c.tx[1], c.tx[2], c.tx[3], a)
 end
 
+--- Enable or disable a flat button and repaint it accordingly.
+---@param b Frame  a button created by makeButton
+---@param enabled boolean  true to enable the button, false to disable it
 function UI.SetBtn(b, enabled)
   if enabled then b:Enable() else b:Disable() end
   paint(b, false)
 end
 
+--- Create a flat, colorable button with a centered label and hover repainting.
+---@param parent Frame  the parent frame
+---@param kind string  a BTN_COLORS key ("primary" | "warn" | "nav")
+---@param font string?  a font object name for the label (default "GameFontNormalSmall")
+---@return Frame  the created button (with .label and ._kind fields)
 local function makeButton(parent, kind, font)
   local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
   b:SetBackdrop(BD1)
@@ -195,12 +231,19 @@ local function makeButton(parent, kind, font)
   b.label:SetPoint("CENTER")
   b.label:SetJustifyH("CENTER")
   b._kind = kind
+  --- Repaint the button in its hover state.
+  ---@param s Frame  the hovered button
   b:SetScript("OnEnter", function(s) paint(s, true) end)
+  --- Repaint the button in its normal state.
+  ---@param s Frame  the button that lost hover
   b:SetScript("OnLeave", function(s) paint(s, false) end)
   paint(b, false)
   return b
 end
 
+--- Create a flat, colorable panel frame using the 1px backdrop.
+---@param parent Frame  the parent frame
+---@return Frame  the created panel
 local function makePanel(parent)
   local p = CreateFrame("Frame", nil, parent, "BackdropTemplate")
   p:SetBackdrop(BD1)
@@ -210,11 +253,13 @@ end
 -- ---------------------------------------------------------------------------
 -- position persistence
 -- ---------------------------------------------------------------------------
+--- Persist the window's current anchor point to the saved variables.
 function UI.SavePosition()
   local p, _, rp, x, y = UI.frame:GetPoint()
   ns.db.pos = { p = p, rp = rp, x = x, y = y }
 end
 
+--- Restore the window's saved anchor point, or center it if none is stored.
 function UI.RestorePosition()
   UI.frame:ClearAllPoints()
   local pos = ns.db and ns.db.pos
@@ -228,6 +273,7 @@ end
 -- ---------------------------------------------------------------------------
 -- build the window
 -- ---------------------------------------------------------------------------
+--- Build the main window and all its child widgets (idempotent: no-op if already built).
 function UI.Init()
   if UI.frame then return end
 
@@ -243,6 +289,8 @@ function UI.Init()
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
   f:SetScript("OnDragStart", f.StartMoving)
+  --- Stop dragging the window and persist its new position.
+  ---@param self Frame  the window frame
   f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); UI.SavePosition() end)
   f:SetClampedToScreen(true)
   f:Hide()
@@ -387,6 +435,8 @@ function UI.Init()
     row.badgeText:SetPoint("CENTER")
 
     row:EnableMouse(true)
+    --- Show a tooltip for the row's mount (by spell/item id, else plain name) plus any note.
+    ---@param self Frame  the hovered row (has .data mount entry and .noteText)
     row:SetScript("OnEnter", function(self)
       if not self.data then return end
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -430,10 +480,16 @@ function UI.Init()
 
   -- left-click: step by one; right-click: jump back to the first step still to do
   f.prev:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  --- Go to the previous step (left-click), or jump back to the first undone step (right-click).
+  ---@param _ Frame  the button frame (unused)
+  ---@param mb string  the mouse button that was clicked
   f.prev:SetScript("OnClick", function(_, mb)
     if mb == "RightButton" then ns.Progress.ResetPointer() else ns.Progress.Prev() end
   end)
   f.next:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  --- Go to the next step (left-click), or jump back to the first undone step (right-click).
+  ---@param _ Frame  the button frame (unused)
+  ---@param mb string  the mouse button that was clicked
   f.next:SetScript("OnClick", function(_, mb)
     if mb == "RightButton" then ns.Progress.ResetPointer() else ns.Progress.Next() end
   end)
@@ -453,8 +509,10 @@ function UI.Init()
   UI.RestorePosition()
 end
 
--- Which reset cadences have completed (locked) content this reset? Used by the
--- "wait for reset" step to show only the relevant countdown(s).
+--- Determine which reset cadences have completed (locked) content this reset. Used by
+--- the "wait for reset" step to show only the relevant countdown(s).
+---@return boolean daily  true if a daily-reset target is done this reset
+---@return boolean weekly  true if a weekly-reset target is done (defaults true when none)
 local function pendingResets()
   local daily, weekly = false, false
   for _, t in ipairs(ns.Progress.Active()) do
@@ -469,6 +527,8 @@ end
 -- ---------------------------------------------------------------------------
 -- refresh the display
 -- ---------------------------------------------------------------------------
+--- Rebuild the window contents for the current step: counters, route, headline,
+--- boss rows, travel action, and nav buttons; also drives auto-guide/waypoints.
 function UI.Refresh()
   local f = UI.frame
   if not f or not f.target then return end
@@ -748,6 +808,7 @@ end
 -- ---------------------------------------------------------------------------
 -- show / hide
 -- ---------------------------------------------------------------------------
+--- Build the window if needed, mark it shown in saved variables, and refresh it.
 function UI.Show()
   if not UI.frame then UI.Init() end
   if ns.db then ns.db.shown = true end
@@ -755,12 +816,14 @@ function UI.Show()
   UI.Refresh()
 end
 
+--- Hide the window (marking it hidden in saved variables) and any travel prompt.
 function UI.Hide()
   if ns.db then ns.db.shown = false end
   if UI.frame then UI.frame:Hide() end
   if ns.Travel then ns.Travel.Hide() end
 end
 
+--- Toggle the window's visibility, building it first if needed.
 function UI.Toggle()
   if not UI.frame then UI.Init() end
   if UI.frame:IsShown() then UI.Hide() else UI.Show() end
@@ -769,6 +832,7 @@ end
 -- ---------------------------------------------------------------------------
 -- options: registered in the game's Settings panel (AddOns category)
 -- ---------------------------------------------------------------------------
+--- Register the addon's options in the game's Settings panel (idempotent).
 function UI.BuildSettings()
   if UI.settingsCategory then return end
   if not (Settings and Settings.RegisterVerticalLayoutCategory and Settings.RegisterProxySetting) then return end
@@ -776,6 +840,11 @@ function UI.BuildSettings()
   local category, layout = Settings.RegisterVerticalLayoutCategory(L["EasyMountFarmer"])
   UI.settingsCategory = category
 
+  --- Register a boolean proxy setting and add a checkbox for it to the category.
+  ---@param variable string  the setting's storage key suffix (prefixed with "EasyMountFarmer_")
+  ---@param name string  the localized label shown next to the checkbox
+  ---@param getter function  returns the current boolean value
+  ---@param setter function  receives the new boolean value
   local function boolean(variable, name, getter, setter)
     local setting = Settings.RegisterProxySetting(category, "EasyMountFarmer_" .. variable,
       Settings.VarType.Boolean, name, true, getter, setter)
@@ -818,6 +887,8 @@ function UI.BuildSettings()
       Settings.VarType.String, L["Announce loot in channel"], "NONE",
       function() return ns.db.lootChannel or "NONE" end,
       function(v) ns.db.lootChannel = v end)
+    --- Build the dropdown options for the loot announce channel.
+    ---@return table  the dropdown control data
     local function options()
       local c = Settings.CreateControlTextContainer()
       c:Add("NONE", L["Do not announce"])
@@ -832,6 +903,7 @@ function UI.BuildSettings()
   Settings.RegisterAddOnCategory(category)
 end
 
+--- Build the settings if needed and open the game's Settings panel to this category.
 function UI.OpenSettings()
   UI.BuildSettings()
   if UI.settingsCategory and Settings and Settings.OpenToCategory then
@@ -842,6 +914,9 @@ end
 -- ---------------------------------------------------------------------------
 -- loot popup
 -- ---------------------------------------------------------------------------
+--- Show a transient "mount obtained" popup with the mount's icon and name (auto-hides).
+---@param name string?  the obtained mount's name
+---@param icon string?  the icon texture path (defaults to a question mark)
 function UI.ShowLootPopup(name, icon)
   local p = UI.popup
   if not p then

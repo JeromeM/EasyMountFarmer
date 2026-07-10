@@ -6,7 +6,8 @@ local ADDON, ns = ...
 
 ns.L = setmetatable({}, { __index = function(_, k) return k end })
 
--- Chat message helper with the addon tag.
+--- Print a chat-frame message prefixed with the coloured addon tag.
+---@param msg any  message to display (coerced to string)
 function ns.Print(msg)
   print("|cffffd200EasyMountFarmer|r: " .. tostring(msg))
 end

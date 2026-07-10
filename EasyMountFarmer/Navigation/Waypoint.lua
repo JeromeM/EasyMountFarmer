@@ -7,16 +7,21 @@ ns.Waypoint = ns.Waypoint or {}
 local Waypoint = ns.Waypoint
 local L = ns.L
 
--- Use TomTom only when it is present AND the user hasn't disabled it.
+--- Whether to use TomTom for waypoints: present AND not disabled by the user.
+---@return boolean  true when TomTom is available and enabled in settings
 local function useTomTom()
   return TomTom and TomTom.AddWaypoint and (not ns.db or ns.db.useTomTom ~= false)
 end
 
--- Resolve a run's entrance from the game's Encounter Journal when it defines
--- entranceJID + candidate entranceMaps. Some raids' portals move (e.g. Ny'alotha,
--- whose entrance follows the weekly N'Zoth assault between Uldum and the Vale);
--- the game only lists the entrance on the map where it currently is, so this
--- auto-tracks the rotation. Returns map, x, y in 0-100, or nil.
+--- Resolve a run's entrance from the game's Encounter Journal when it defines
+--- entranceJID + candidate entranceMaps. Some raids' portals move (e.g. Ny'alotha,
+--- whose entrance follows the weekly N'Zoth assault between Uldum and the Vale);
+--- the game only lists the entrance on the map where it currently is, so this
+--- auto-tracks the rotation.
+---@param l table  location entry with entranceJID and entranceMaps fields
+---@return number? mapId  uiMapID of the map holding the entrance, or nil
+---@return number? x  entrance X coordinate in 0-100
+---@return number? y  entrance Y coordinate in 0-100
 local function liveEntrance(l)
   if not (l and l.entranceJID and l.entranceMaps) then return end
   if not (C_EncounterJournal and C_EncounterJournal.GetDungeonEntrancesForMap) then return end
@@ -35,8 +40,12 @@ local function liveEntrance(l)
   end
 end
 
--- Effective entrance coords (0-100) for a run key: live Encounter-Journal
--- resolution first, then the static Locations coords as a fallback.
+--- Resolve the effective entrance coords (0-100) for a run key: live
+--- Encounter-Journal resolution first, then the static Locations coords as a fallback.
+---@param key string  Locations key identifying the run
+---@return number? mapId  uiMapID of the entrance map, or nil if unknown
+---@return number? x  entrance X coordinate in 0-100
+---@return number? y  entrance Y coordinate in 0-100
 function ns.EntranceFor(key)
   local l = (EasyMountFarmerLocations or {})[key]
   if not l then return end
@@ -45,7 +54,7 @@ function ns.EntranceFor(key)
   if l.map and l.x and l.y then return l.map, l.x, l.y end
 end
 
--- Remove the waypoint WE set (if any).
+--- Remove the waypoint WE set (if any), leaving player-placed waypoints intact.
 function Waypoint.Clear()
   if TomTom and Waypoint._uid then
     if TomTom.RemoveWaypoint then pcall(TomTom.RemoveWaypoint, TomTom, Waypoint._uid) end
@@ -60,7 +69,12 @@ function Waypoint.Clear()
   end
 end
 
--- Low-level: set a waypoint/arrow to an explicit UI map point (x,y in 0-1).
+--- Set a waypoint/arrow to an explicit UI map point: TomTom if enabled, else
+--- the Blizzard user waypoint. Clears our previously-set waypoint first.
+---@param mapID number  uiMapID of the target map
+---@param x number  normalized X coordinate (0-1)
+---@param y number  normalized Y coordinate (0-1)
+---@param title string?  label shown on the waypoint
 function Waypoint.SetTo(mapID, x, y, title)
   if not mapID or not x or not y then return end
   Waypoint.Clear()   -- drop our previous one first
@@ -82,7 +96,10 @@ function Waypoint.SetTo(mapID, x, y, title)
   end
 end
 
--- High-level: guide to the target's entrance (from Locations coords, 0-100).
+--- Guide to the target's entrance (from Locations coords, 0-100): resolve the
+--- coords then place a waypoint, printing a message on failure unless silent.
+---@param target table  run entry with key and title fields
+---@param silent boolean?  suppress user-facing error messages when true
 function Waypoint.GuideTo(target, silent)
   if not target then return end
   local map, x, y = ns.EntranceFor(target.key)

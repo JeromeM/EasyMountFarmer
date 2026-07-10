@@ -5,7 +5,10 @@ local ADDON, ns = ...
 ns.Detect = ns.Detect or {}
 local Detect = ns.Detect
 
--- Find the active target whose boss matches this encounterID.
+--- Find the active target whose boss matches this encounterID.
+---@param encounterID number  encounter journal ID from ENCOUNTER_END
+---@return table? target  the matching target from ns.allTargets, or nil if none
+---@return table? location  its EasyMountFarmerLocations entry, or nil if none
 local function targetForEncounter(encounterID)
   local loc = EasyMountFarmerLocations or {}
   for _, t in ipairs(ns.allTargets or {}) do
@@ -19,6 +22,15 @@ local function targetForEncounter(encounterID)
   return nil
 end
 
+--- Handle ENCOUNTER_END: on a successful kill of a boss belonging to an active
+--- target, mark that run done (source "kill"). Only counts on a difficulty where
+--- the mount can drop; a Mythic Keystone (8) also satisfies a Mythic (23)
+--- requirement.
+---@param encounterID number  encounter journal ID of the boss
+---@param encName string  encounter name
+---@param difficultyID number  difficulty the encounter was fought on
+---@param _ any  group size (unused)
+---@param success number  1 if the encounter ended in a kill
 local function onEncounterEnd(encounterID, encName, difficultyID, _, success)
   if success ~= 1 then return end
   if not ns.charDB then return end
@@ -37,6 +49,10 @@ local function onEncounterEnd(encounterID, encName, difficultyID, _, success)
   ns.Progress.MarkDone(t.key, t.type, "kill")
 end
 
+--- Handle NEW_MOUNT_ADDED: if the looted mount is on the current route, show the
+--- loot congrats popup, optionally announce it in the configured chat channel,
+--- and rebuild progress.
+---@param mountID number?  journal ID of the newly added mount
 local function onNewMount(mountID)
   if not mountID or not ns.Route then return end
   if not ns.Route.IsRouteMount(mountID) then return end
