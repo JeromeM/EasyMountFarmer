@@ -55,6 +55,7 @@ f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("QUEST_TURNED_IN")
+f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 f:SetScript("OnEvent", function(_, event, arg1)
   if event == "ADDON_LOADED" then
     if arg1 == ADDON then initSavedVars() end
@@ -62,9 +63,18 @@ f:SetScript("OnEvent", function(_, event, arg1)
     onLogin()
   elseif event == "PLAYER_ENTERING_WORLD" then
     if ns.charDB then ns.Progress.CheckResets() end
+    -- after a loading screen the player's map/position isn't settled yet, so the
+    -- route can be stale for a moment (e.g. still suggesting the teleport you just
+    -- used); recompute shortly after, once the position has updated.
+    C_Timer.After(1.5, function()
+      if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
+    end)
   elseif event == "QUEST_TURNED_IN" then
     -- a weekly/daily tracking quest may have completed (e.g. world boss)
     if ns.charDB then ns.Progress.Rebuild() end
+  elseif event == "ZONE_CHANGED_NEW_AREA" then
+    -- entered a new zone without a loading screen: re-run navigation from here
+    if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
   end
 end)
 
@@ -203,6 +213,9 @@ SlashCmdList.EASYMOUNTFARMER = function(msg)
       end
     end
     if not any then print("  (none detected in bags/equipped — this is likely why the ring is skipped)") end
+
+  elseif msg == "gen" then
+    ns.Gen.Generate()
 
   elseif msg == "help" then
     ns.Print(L["Commands:"])

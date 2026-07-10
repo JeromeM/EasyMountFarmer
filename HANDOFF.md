@@ -129,3 +129,28 @@ Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Waypoint, Navig
 
 ## Reference addons on disk (study only, ARR-licensed)
 `FarstriderLib`/`FarstriderLibData` (router we call), `TomTom` (optional arrow), `Overachiever2` (Settings API pattern), `Syndicator`.
+
+## Mount-data pipeline (in progress — replacing SimpleArmory planner.json)
+Goal: our own data, generated in-game, with an OPTIMIZED visiting order (hierarchical
+**expansion → zone → intra-zone proximity**, + runtime rotation to start near the player).
+
+- **`Tools/Generator.lua`** (`/emf gen`, DEV-ONLY) walks the Encounter Journal → every
+  dungeon/raid/world-boss mount drop, tagged with expansion, encounterID, difficulties,
+  faction, AND now **location** (zone/continent/entrance x,y via a brute-force
+  `GetDungeonEntrancesForMap` harvest). Also lists **orphans** = "Drop" mounts not on a
+  boss (AQ trash, world rares) via source-label match. Writes saved var `EasyMountFarmerGen`.
+  Async loot + item-cache handled (poll). Iterates all difficulties (Heroic/Mythic-only drops).
+- Flow: `/emf gen` → `/reload` → snapshot `WTF/.../EasyMountFarmer.lua`'s Gen table into
+  repo **`data/mounts-export.lua`** → **`scripts/build-mounts.mjs`** (luaparse) splits into:
+  - **`Data/MountsInstances.lua`** (`EasyMountFarmerInstances`) — 65: dungeon/raid/worldboss, each with `category`.
+  - **`Data/MountsWorld.lua`** (`EasyMountFarmerWorld`) — world rares (orphans minus ExtraMounts ids).
+  - **`Data/ExtraMounts.lua`** (`EasyMountFarmerExtra`, HAND) — AQ tanks 110/117/118/119(/120 legacy) + Amani bear 400 (trash, no encounterID).
+- Last gen: 65 instances (wb6/raid40/dun19), 191 orphans. 1 unresolved mountID (Quantum Courser) — refetch next gen.
+
+### TODO (this feature)
+1. **Re-run `/emf gen`** (location capture just added) → re-snapshot → re-run build-mounts.
+2. **Ordering** in build-mounts.mjs: sort instances by expansion → zone → nearest-neighbour(x,y); emit an `order` index.
+3. **Runtime rotation**: on open, start the sequence at the player's nearest continent/zone.
+4. **Integration**: rewrite Route.lua/Progress to consume EasyMountFarmerInstances+Extra (drop RouteData/planner.json).
+5. **Category filter** in options (dungeon/raid/worldboss/trash/worldrare).
+6. **Packaging**: `/emf gen` + `Tools/Generator.lua` DEV-ONLY; `scripts/package.sh` → CurseForge ZIP with data baked, generator excluded.

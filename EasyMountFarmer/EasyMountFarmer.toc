@@ -3,7 +3,7 @@
 ## Notes: In-game mount farming route planner
 ## Author: JeromeM
 ## Version: 0.1.0
-## SavedVariables: EasyMountFarmerDB
+## SavedVariables: EasyMountFarmerDB, EasyMountFarmerGen
 ## SavedVariablesPerCharacter: EasyMountFarmerCharDB
 ## OptionalDeps: TomTom, FarstriderLib
 
@@ -22,4 +22,5 @@ Navigation\Travel.lua
 Navigation\Nav.lua
 UI\UI.lua
 UI\MinimapButton.lua
+Tools\Generator.lua
 Core\Core.lua
