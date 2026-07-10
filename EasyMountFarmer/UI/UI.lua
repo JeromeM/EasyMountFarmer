@@ -1031,6 +1031,8 @@ function UI.Hide()
   if UI.frame then UI.frame:Hide() end
   if UI.filterPanel then UI.filterPanel:Hide() end
   if ns.Travel then ns.Travel.Hide() end
+  if ns.Waypoint then ns.Waypoint.Clear() end   -- remove our TomTom / Blizzard arrow
+  UI.lastGuidedKey = nil                          -- so reopening re-places the arrow
 end
 
 --- Toggle the window's visibility, building it first if needed.
