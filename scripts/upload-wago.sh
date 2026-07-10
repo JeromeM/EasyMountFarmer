@@ -25,7 +25,7 @@ resp="$(curl -sS -w '\n%{http_code}' -X POST \
   "https://addons.wago.io/api/projects/${WAGO_PROJECT_ID}/version" \
   -H "Authorization: Bearer ${WAGO_API_TOKEN}" \
   -H "accept: application/json" \
-  -F "metadata=@wago-metadata.json;type=application/json" \
+  -F "metadata=<wago-metadata.json" \
   -F "file=@${ZIP};type=application/zip")"
 
 code="$(printf '%s' "$resp" | tail -n1)"
