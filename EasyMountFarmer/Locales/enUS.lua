@@ -1,0 +1,99 @@
+-- enUS locale (base / reference). Copy this file to another locale (e.g. frFR.lua),
+-- guard it with `if GetLocale() ~= "frFR" then return end`, and translate the values.
+
+local ADDON, ns = ...
+local L = ns.L
+
+-- window / general
+L["EasyMountFarmer"] = "EasyMountFarmer"
+L["Grats! All farmable mounts collected."] = "Grats! All farmable mounts collected."
+L["Nothing to farm this reset — come back after reset."] = "Nothing to farm this reset — come back after reset."
+L["Done this reset"] = "Done this reset"
+L["All done for this reset"] = "All done for this reset"
+L["Come back after the reset to continue."] = "Come back after the reset to continue."
+L["Daily reset in %s"] = "Daily reset in %s"
+L["Weekly reset in %s"] = "Weekly reset in %s"
+L["Use %s"] = "Use %s"
+L["Leave the instance / Hearthstone"] = "Leave the instance / Hearthstone"
+L["Step %d / %d"] = "Step %d / %d"
+L["%d mounts to find"] = "%d mounts to find"
+L["daily reset %s"] = "daily reset %s"
+L["weekly reset %s"] = "weekly reset %s"
+L["Manual route (optional)"] = "Manual route (optional)"
+L["Do the dungeon"] = "Do the dungeon"
+L["Do the raid"] = "Do the raid"
+L["Kill the world boss"] = "Kill the world boss"
+
+-- route step verb templates (zone name comes from the game API)
+L["Fly to %s"] = "Fly to %s"
+L["Portal to %s"] = "Portal to %s"
+L["Walk to %s"] = "Walk to %s"
+L["Teleport to %s"] = "Teleport to %s"
+L["Hearthstone to %s"] = "Hearthstone to %s"
+L["(+%d more mounts here)"] = "(+%d more mounts here)"
+L["Mark step as done"] = "Mark step as done"
+L["Reset all completed steps for this reset?"] = "Reset all completed steps for this reset?"
+L["Mount obtained!"] = "Mount obtained!"
+
+-- options page
+L["Options"] = "Options"
+L["Auto-advance to the next step"] = "Auto-advance to the next step"
+L["Use TomTom"] = "Use TomTom"
+L["TomTom is not installed"] = "TomTom is not installed"
+L["Show the loot notification"] = "Show the loot notification"
+L["Auto-guide (waypoint / action)"] = "Auto-guide (waypoint / action)"
+L["Show the minimap button"] = "Show the minimap button"
+L["Open the mount collection"] = "Open the mount collection"
+L["Announce loot in channel"] = "Announce loot in channel"
+L["Do not announce"] = "Do not announce"
+L["Party"] = "Party"
+L["Raid"] = "Raid"
+L["Guild"] = "Guild"
+L["Looted the mount: %s!"] = "Looted the mount: %s!"
+
+-- breadcrumb / navigation
+L["Hearthstone: %s"] = "Hearthstone: %s"
+L["Hearthstone -> %s"] = "Hearthstone -> %s"
+L["Use your Hearthstone (goes to where it is bound)"] = "Use your Hearthstone (goes to where it is bound)"
+L["Auto waypoint arrow: ON"] = "Auto waypoint arrow: ON"
+L["Auto waypoint arrow: OFF"] = "Auto waypoint arrow: OFF"
+L["Click to use, drag to move"] = "Click to use, drag to move"
+L["Stormwind"] = "Stormwind"
+L["Orgrimmar"] = "Orgrimmar"
+
+-- difficulty
+L["Normal"] = "Normal"
+L["Heroic"] = "Heroic"
+L["Mythic"] = "Mythic"
+L["Mythic Keystone"] = "Mythic Keystone"
+L["Looking For Raid"] = "Looking For Raid"
+L["10 Player"] = "10 Player"
+L["25 Player"] = "25 Player"
+L["10 Player Heroic"] = "10 Player Heroic"
+L["25 Player Heroic"] = "25 Player Heroic"
+L["40 Player"] = "40 Player"
+L["Difficulty"] = "Difficulty"
+L["Switch to %s"] = "Switch to %s"
+L["Cannot change difficulty in combat."] = "Cannot change difficulty in combat."
+L["Cannot change difficulty (party leader required, or already inside the instance)."] = "Cannot change difficulty (party leader required, or already inside the instance)."
+
+-- waypoint
+L["No coordinates for \"%s\" (fill them in Locations.lua)."] = "No coordinates for \"%s\" (fill them in Locations.lua)."
+L["Cannot place a waypoint on that map from here."] = "Cannot place a waypoint on that map from here."
+L["No waypoint system available."] = "No waypoint system available."
+
+-- minimap / slash
+L["Left-click: open/close"] = "Left-click: open/close"
+L["Right-click: reset this-reset progress"] = "Right-click: reset this-reset progress"
+L["Per-reset progress cleared."] = "Per-reset progress cleared."
+L["Re-synced to the first step to do."] = "Re-synced to the first step to do."
+L["Right-click: jump to the next step to do"] = "Right-click: jump to the next step to do"
+L["Commands:"] = "Commands:"
+L["/emf — open/close the window"] = "/emf — open/close the window"
+L["/emf next | prev — navigate steps"] = "/emf next | prev — navigate steps"
+L["/emf guide — set a waypoint to the current step"] = "/emf guide — set a waypoint to the current step"
+L["/emf reset — clear this-reset progress"] = "/emf reset — re-sync and jump to the next step"
+L["/emf minimap — toggle the minimap button"] = "/emf minimap — toggle the minimap button"
+L["/emf arrow — toggle the auto waypoint arrow"] = "/emf arrow — toggle the auto waypoint arrow"
+L["/emf debug — show saved-instance diagnostics"] = "/emf debug — show saved-instance diagnostics"
+L["/emf entrance — list instance entrances on this map"] = "/emf entrance — list instance entrances on this map"

@@ -1,0 +1,878 @@
+-- UI.lua — the "one step at a time" window, flat/modern look.
+-- Shows only the current target: header, per-reset counters, a ROUTE box (the
+-- travel steps as a bullet list), the localized headline ("Do the dungeon X"),
+-- one row per still-needed mount, and Prev / Mark-done / Next.
+-- Everything user-facing is localized: UI chrome via ns.L, and mount / boss /
+-- instance / difficulty names resolved from IDs and the game's own source text.
+
+local ADDON, ns = ...
+ns.UI = ns.UI or {}
+local UI = ns.UI
+local L = ns.L
+
+local MAX_ROWS = 4          -- max bosses shown at once (AQ drops 4 crystals)
+local W, PAD = 340, 14
+local INNER = W - PAD * 2
+
+-- text colors (escape codes)
+local AMBER = "|cfff0a94a"
+local GREY  = "|cff8a8a8a"
+local WHITE = "|cffe9e9ec"
+
+-- rgb accents
+local C_BG        = { 0.086, 0.090, 0.106 }
+local C_BORDER    = { 0.22, 0.22, 0.27 }
+local C_SEP       = { 0.19, 0.19, 0.23 }
+local C_PANEL_BG  = { 0.15, 0.15, 0.18 }    -- same family as the nav buttons
+local C_PANEL_BRD = { 0.30, 0.30, 0.36 }
+local C_GOLD_BRD  = { 0.55, 0.40, 0.14 }
+local C_AMBER_TX  = { 0.96, 0.72, 0.32 }
+local C_EPIC      = { 0.64, 0.21, 0.93 }
+local C_RARE      = { 0.12, 0.55, 0.90 }
+local NORMAL_DIFFS = { [1] = true, [14] = true }   -- not worth a badge
+local MYTHIC_DIFFS = { [23] = true, [16] = true, [8] = true }
+local HEARTHSTONE_ID = 6948   -- the standard Hearthstone item
+
+-- 1px flat backdrop, fully colorable
+local BD1 = {
+  bgFile = "Interface\\Buttons\\WHITE8x8",
+  edgeFile = "Interface\\Buttons\\WHITE8x8",
+  edgeSize = 1,
+}
+
+-- ---------------------------------------------------------------------------
+-- localization helpers (resolve names from IDs / the game's source text)
+-- ---------------------------------------------------------------------------
+
+-- Localized mount name from its journal id; falls back to the stored name.
+local function mountName(boss)
+  if boss.ID and C_MountJournal and C_MountJournal.GetMountInfoByID then
+    local ok, name = pcall(C_MountJournal.GetMountInfoByID, boss.ID)
+    if ok and name and name ~= "" then return name end
+  end
+  return boss.mount or "?"
+end
+
+-- The mount's localized source text is a few lines separated by "|n" (WoW's
+-- newline token) or real newlines, e.g. "Drop: <boss>|n<instance>|n<expansion>".
+-- Return an array of trimmed, non-empty lines (or nil).
+local function sourceLines(mountID)
+  if not (mountID and C_MountJournal and C_MountJournal.GetMountInfoExtraByID) then return end
+  local ok, _, _, source = pcall(C_MountJournal.GetMountInfoExtraByID, mountID)
+  if not ok or type(source) ~= "string" or source == "" then return end
+  source = source:gsub("|n", "\n")
+  local lines = {}
+  for line in source:gmatch("[^\r\n]+") do
+    line = line:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")   -- strip color codes
+    line = line:gsub("|T.-|t", "")                              -- strip inline textures
+    line = line:gsub("^%s+", ""):gsub("%s+$", "")
+    if line ~= "" then lines[#lines + 1] = line end
+  end
+  return lines
+end
+
+-- Strip a leading localized label ("Drop:", "Butin :", "Région :", ...) and a
+-- trailing "(difficulty)" parenthetical, keeping the meaningful name.
+local function stripLabel(s)
+  if not s then return nil end
+  s = s:gsub("%s*%b()%s*$", "")           -- trailing "(mythic)" etc.
+  local after = s:match("[:：]%s*(.+)$")   -- text after "Label :"
+  if after then s = after end
+  s = s:gsub("^%s+", ""):gsub("%s+$", "")
+  return (s ~= "" and s) or nil
+end
+
+-- Uppercase the first letter (only when it is an ASCII a-z, to stay UTF-8 safe).
+local function capitalize(s)
+  if not s or s == "" then return s end
+  local b = s:byte(1)
+  if b and b >= 97 and b <= 122 then
+    return string.char(b - 32) .. s:sub(2)
+  end
+  return s
+end
+
+-- Localized boss name for a mount (first source line), or nil.
+local function bossName(boss)
+  local lines = sourceLines(boss.ID)
+  local b = lines and lines[1] and stripLabel(lines[1])
+  if b then return b end
+  return (boss.name and boss.name ~= "" and boss.name) or nil
+end
+
+-- Clean the English run title as a fallback: "Run Freehold (Dungeon)" -> "Freehold".
+local function cleanTitle(title)
+  if not title then return "?" end
+  title = title:gsub("^Run%s+", "")
+  title = title:gsub("%s*%b()%s*$", "")
+  return title
+end
+
+-- Localized instance name for a target. Priority: an explicit locale override
+-- for the cleaned title (for cases the game's source text doesn't resolve), then
+-- the first mount's 2nd source line, then the cleaned English run title.
+local function instanceName(target)
+  local clean = cleanTitle(target.title)
+  local tr = L[clean]
+  if tr and tr ~= clean then return tr end
+  local first = target.bosses and target.bosses[1]
+  if first then
+    local lines = sourceLines(first.ID)
+    if lines and lines[2] then
+      local inst = stripLabel(lines[2])
+      if inst then return inst end
+    end
+  end
+  return clean
+end
+
+-- Localized headline split into (action line, name line). action may be nil.
+local function targetParts(target)
+  local l = (EasyMountFarmerLocations or {})[target.key]
+  if l and l.questId then
+    -- world boss: the name is the BOSS (source line 1), not its zone
+    local first = target.bosses and target.bosses[1]
+    local bn = (first and bossName(first)) or instanceName(target)
+    return L["Kill the world boss"], capitalize(bn)
+  end
+  local inst = capitalize(instanceName(target))
+  local t = target.type or ""
+  if t:find("Dungeon") then return L["Do the dungeon"], inst end
+  if t:find("Raid") then return L["Do the raid"], inst end
+  return nil, inst
+end
+
+-- Localized required-difficulty label (via the game), or nil if not worth a badge.
+local function diffBadge(target)
+  local l = (EasyMountFarmerLocations or {})[target.key]
+  if not l or not l.reqDiff or NORMAL_DIFFS[l.reqDiff] then return nil end
+  if GetDifficultyInfo then
+    local ok, name = pcall(GetDifficultyInfo, l.reqDiff)
+    if ok and name and name ~= "" then return name, MYTHIC_DIFFS[l.reqDiff] end
+  end
+  return nil
+end
+
+-- Format a duration in seconds as "Xd Yh" / "Xh Ym" / "Xm".
+function UI.Dur(s)
+  s = math.max(0, math.floor(s or 0))
+  local d = math.floor(s / 86400); s = s % 86400
+  local h = math.floor(s / 3600); s = s % 3600
+  local m = math.floor(s / 60)
+  if d > 0 then return d .. "d " .. h .. "h" end
+  if h > 0 then return h .. "h " .. m .. "m" end
+  return m .. "m"
+end
+
+-- ---------------------------------------------------------------------------
+-- flat widget builders
+-- ---------------------------------------------------------------------------
+local BTN_COLORS = {
+  primary = { bg = {0.24,0.17,0.05}, hov = {0.34,0.25,0.08}, brd = {0.85,0.65,0.25}, tx = {1.0,0.82,0.40} },
+  warn    = { bg = {0.20,0.14,0.04}, hov = {0.28,0.20,0.06}, brd = {0.80,0.55,0.15}, tx = {1.0,0.78,0.35} },
+  nav     = { bg = {0.15,0.15,0.18}, hov = {0.22,0.22,0.27}, brd = {0.30,0.30,0.36}, tx = {0.86,0.86,0.90} },
+}
+
+local function paint(b, hover)
+  local c = BTN_COLORS[b._kind] or BTN_COLORS.nav
+  local on = b:IsEnabled()
+  local a = on and 1 or 0.4
+  local bg = (hover and on) and c.hov or c.bg
+  b:SetBackdropColor(bg[1], bg[2], bg[3], on and 0.95 or 0.5)
+  b:SetBackdropBorderColor(c.brd[1], c.brd[2], c.brd[3], a)
+  b.label:SetTextColor(c.tx[1], c.tx[2], c.tx[3], a)
+end
+
+function UI.SetBtn(b, enabled)
+  if enabled then b:Enable() else b:Disable() end
+  paint(b, false)
+end
+
+local function makeButton(parent, kind, font)
+  local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
+  b:SetBackdrop(BD1)
+  b.label = b:CreateFontString(nil, "OVERLAY", font or "GameFontNormalSmall")
+  b.label:SetPoint("CENTER")
+  b.label:SetJustifyH("CENTER")
+  b._kind = kind
+  b:SetScript("OnEnter", function(s) paint(s, true) end)
+  b:SetScript("OnLeave", function(s) paint(s, false) end)
+  paint(b, false)
+  return b
+end
+
+local function makePanel(parent)
+  local p = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+  p:SetBackdrop(BD1)
+  return p
+end
+
+-- ---------------------------------------------------------------------------
+-- position persistence
+-- ---------------------------------------------------------------------------
+function UI.SavePosition()
+  local p, _, rp, x, y = UI.frame:GetPoint()
+  ns.db.pos = { p = p, rp = rp, x = x, y = y }
+end
+
+function UI.RestorePosition()
+  UI.frame:ClearAllPoints()
+  local pos = ns.db and ns.db.pos
+  if pos and pos.p then
+    UI.frame:SetPoint(pos.p, UIParent, pos.rp, pos.x, pos.y)
+  else
+    UI.frame:SetPoint("CENTER")
+  end
+end
+
+-- ---------------------------------------------------------------------------
+-- build the window
+-- ---------------------------------------------------------------------------
+function UI.Init()
+  if UI.frame then return end
+
+  local f = CreateFrame("Frame", "EasyMountFarmerFrame", UIParent, "BackdropTemplate")
+  UI.frame = f
+  f:SetSize(W, 360)
+  f:SetFrameStrata("MEDIUM")
+  f:SetToplevel(true)
+  f:SetBackdrop(BD1)
+  f:SetBackdropColor(C_BG[1], C_BG[2], C_BG[3], 0.97)
+  f:SetBackdropBorderColor(C_BORDER[1], C_BORDER[2], C_BORDER[3], 1)
+  f:SetMovable(true)
+  f:EnableMouse(true)
+  f:RegisterForDrag("LeftButton")
+  f:SetScript("OnDragStart", f.StartMoving)
+  f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); UI.SavePosition() end)
+  f:SetClampedToScreen(true)
+  f:Hide()
+
+  -- header: icon (left) + centered title + close (right)
+  f.icon = makePanel(f)
+  f.icon:SetSize(22, 22)
+  f.icon:SetPoint("TOPLEFT", PAD, -12)
+  f.icon:SetBackdropColor(0.10, 0.08, 0.14, 1)
+  f.icon:SetBackdropBorderColor(C_EPIC[1], C_EPIC[2], C_EPIC[3], 0.9)
+  f.iconTex = f.icon:CreateTexture(nil, "ARTWORK")
+  f.iconTex:SetPoint("TOPLEFT", 2, -2)
+  f.iconTex:SetPoint("BOTTOMRIGHT", -2, 2)
+  f.iconTex:SetTexture("Interface\\Icons\\Ability_Mount_RidingHorse")
+  f.iconTex:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+  f.icon:EnableMouse(true)
+  f.icon:SetScript("OnMouseUp", function()
+    if not InCombatLockdown() and ToggleCollectionsJournal then
+      pcall(ToggleCollectionsJournal, 1)   -- open Collections -> Mounts tab
+    end
+  end)
+
+  f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+  f.title:SetPoint("TOP", f, "TOP", 0, -15)
+  f.title:SetText(WHITE .. L["EasyMountFarmer"] .. "|r")
+
+  f.close = makeButton(f, "nav", "GameFontNormalLarge")
+  f.close:SetSize(22, 22)
+  f.close:SetPoint("TOPRIGHT", -10, -11)
+  f.close.label:SetText("×")
+  f.close:SetScript("OnClick", function() UI.Hide() end)
+
+  -- options (gear) button, just left of the close button
+  f.gear = makeButton(f, "nav")
+  f.gear:SetSize(22, 22)
+  f.gear:SetPoint("RIGHT", f.close, "LEFT", -4, 0)
+  f.gear.label:Hide()
+  f.gearTex = f.gear:CreateTexture(nil, "OVERLAY")
+  f.gearTex:SetSize(14, 14)
+  f.gearTex:SetPoint("CENTER")
+  f.gearTex:SetTexture("Interface\\ICONS\\INV_Misc_Gear_01")
+  f.gearTex:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+  f.gear:SetScript("OnClick", function() UI.OpenSettings() end)
+
+  -- header separator
+  f.sep = f:CreateTexture(nil, "ARTWORK")
+  f.sep:SetColorTexture(C_SEP[1], C_SEP[2], C_SEP[3], 1)
+  f.sep:SetHeight(1)
+  f.sep:SetPoint("TOPLEFT", PAD, -44)
+  f.sep:SetPoint("TOPRIGHT", -PAD, -44)
+
+  -- step / count row
+  f.step = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  f.step:SetJustifyH("LEFT")
+  f.count = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  f.count:SetJustifyH("RIGHT")
+
+  -- ROUTE box (bullet list of travel steps)
+  f.routeBox = makePanel(f)
+  f.routeBox:SetBackdropColor(C_PANEL_BG[1], C_PANEL_BG[2], C_PANEL_BG[3], 0.9)
+  f.routeBox:SetBackdropBorderColor(C_PANEL_BRD[1], C_PANEL_BRD[2], C_PANEL_BRD[3], 1)
+  f.routeLabel = f.routeBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  f.routeLabel:SetPoint("TOPLEFT", 8, -7)
+  f.routeLabel:SetText(L["Manual route (optional)"])
+  f.routeLabel:SetTextColor(0.55, 0.55, 0.62)
+  f.routeText = f.routeBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  f.routeText:SetPoint("TOPLEFT", 8, -22)
+  f.routeText:SetWidth(INNER - 16)
+  f.routeText:SetJustifyH("LEFT")
+  f.routeText:SetJustifyV("TOP")
+  f.routeText:SetWordWrap(true)
+  f.routeText:SetSpacing(3)
+  f.routeText:SetTextColor(0.82, 0.82, 0.88)
+
+  -- target headline: small dim action line + big amber name line (both centered)
+  f.targetAction = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  f.targetAction:SetJustifyH("CENTER")
+  f.targetAction:SetTextColor(0.62, 0.62, 0.68)
+
+  f.target = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+  f.target:SetJustifyH("CENTER")
+  f.target:SetWordWrap(true)
+  f.target:SetSpacing(2)
+
+  -- "done this reset" marker (shown when the current step is already completed)
+  f.doneMark = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  f.doneMark:SetJustifyH("CENTER")
+  f.doneMark:Hide()
+
+  -- "wait for reset" info: guidance + countdown, shown on the all-done step
+  f.waitInfo = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  f.waitInfo:SetJustifyH("CENTER")
+  f.waitInfo:SetSpacing(5)
+  f.waitInfo:Hide()
+
+  -- docked action panel: the clickable travel action (hearthstone / teleport /
+  -- item) with the secure button anchored inside it (see Travel.lua).
+  f.actionPanel = makePanel(f)
+  f.actionPanel:SetBackdropColor(0.17, 0.13, 0.05, 0.9)
+  f.actionPanel:SetBackdropBorderColor(C_GOLD_BRD[1], C_GOLD_BRD[2], C_GOLD_BRD[3], 1)
+  f.actionLabel = f.actionPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  f.actionLabel:SetPoint("LEFT", f.actionPanel, "LEFT", 46, 0)
+  f.actionLabel:SetPoint("RIGHT", f.actionPanel, "RIGHT", -8, 0)
+  f.actionLabel:SetJustifyH("LEFT")
+  f.actionLabel:SetWordWrap(false)
+  f.actionLabel:SetTextColor(C_AMBER_TX[1], C_AMBER_TX[2], C_AMBER_TX[3])
+  ns.Travel.Ensure(f.actionPanel)   -- builds + docks the secure button in the panel
+  f.actionPanel:Hide()
+
+  -- boss rows
+  UI.rows = {}
+  for i = 1, MAX_ROWS do
+    local row = CreateFrame("Frame", nil, f)
+    row:SetSize(INNER, 38)
+
+    row.iconFrame = makePanel(row)
+    row.iconFrame:SetSize(36, 36)
+    row.iconFrame:SetPoint("TOPLEFT", 0, 0)
+    row.iconFrame:SetBackdropColor(0, 0, 0, 0.5)
+    row.icon = row.iconFrame:CreateTexture(nil, "ARTWORK")
+    row.icon:SetPoint("TOPLEFT", 2, -2)
+    row.icon:SetPoint("BOTTOMRIGHT", -2, 2)
+    row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.name:SetPoint("TOPLEFT", row.iconFrame, "TOPRIGHT", 10, -1)
+    row.name:SetJustifyH("LEFT")
+    row.name:SetWordWrap(false)
+    row.name:SetTextColor(C_AMBER_TX[1], C_AMBER_TX[2], C_AMBER_TX[3])
+
+    row.boss = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.boss:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -3)
+    row.boss:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    row.boss:SetJustifyH("LEFT")
+    row.boss:SetWordWrap(false)
+
+    -- difficulty badge (pill)
+    row.badge = makePanel(row)
+    row.badge:SetHeight(18)
+    row.badge:SetPoint("TOPRIGHT", 0, -1)
+    row.badgeText = row.badge:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.badgeText:SetPoint("CENTER")
+
+    row:EnableMouse(true)
+    row:SetScript("OnEnter", function(self)
+      if not self.data then return end
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      local b = self.data
+      if b.spellId and GameTooltip.SetMountBySpellID then
+        GameTooltip:SetMountBySpellID(b.spellId)
+      elseif b.itemId and GameTooltip.SetItemByID then
+        GameTooltip:SetItemByID(b.itemId)
+      else
+        GameTooltip:SetText(mountName(b))
+      end
+      if self.noteText and self.noteText ~= "" then
+        GameTooltip:AddLine(self.noteText, 0.7, 0.7, 0.7, true)
+      end
+      GameTooltip:Show()
+    end)
+    row:SetScript("OnLeave", GameTooltip_Hide)
+    UI.rows[i] = row
+  end
+
+  -- difficulty switch button (conditional)
+  f.diff = makeButton(f, "warn")
+  f.diff:SetHeight(24)
+  f.diff:SetScript("OnClick", function()
+    ns.Difficulty.SwitchTo(ns.Progress.Current())
+  end)
+  f.diff:Hide()
+
+  -- bottom nav row
+  f.prev = makeButton(f, "nav", "GameFontNormalLarge")
+  f.prev:SetSize(34, 28)
+  f.prev.label:SetText("‹")
+
+  f.next = makeButton(f, "nav", "GameFontNormalLarge")
+  f.next:SetSize(34, 28)
+  f.next.label:SetText("›")
+
+  f.done = makeButton(f, "primary", "GameFontNormalSmall")
+  f.done:SetHeight(28)
+  f.done.label:SetText(L["Mark step as done"])
+
+  -- left-click: step by one; right-click: jump back to the first step still to do
+  f.prev:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  f.prev:SetScript("OnClick", function(_, mb)
+    if mb == "RightButton" then ns.Progress.ResetPointer() else ns.Progress.Prev() end
+  end)
+  f.next:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  f.next:SetScript("OnClick", function(_, mb)
+    if mb == "RightButton" then ns.Progress.ResetPointer() else ns.Progress.Next() end
+  end)
+  f.done:SetScript("OnClick", function()
+    local cur = ns.Progress.Current()
+    if cur then ns.Progress.MarkDone(cur.key, cur.type, "manual") end
+  end)
+
+  -- reset-all popup (triggered by slash / minimap right-click; no visible button)
+  StaticPopupDialogs["EASYMOUNTFARMER_RESET_ALL"] = {
+    text = L["Reset all completed steps for this reset?"],
+    button1 = YES, button2 = NO,
+    OnAccept = function() ns.Progress.ResetAllDone() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+  }
+
+  UI.RestorePosition()
+end
+
+-- Which reset cadences have completed (locked) content this reset? Used by the
+-- "wait for reset" step to show only the relevant countdown(s).
+local function pendingResets()
+  local daily, weekly = false, false
+  for _, t in ipairs(ns.Progress.Active()) do
+    if ns.Progress.IsDone(t.key) then
+      if ns.Progress.ResetTypeFor(t.key, t.type) == "Dungeon" then daily = true else weekly = true end
+    end
+  end
+  if not daily and not weekly then weekly = true end   -- sane default
+  return daily, weekly
+end
+
+-- ---------------------------------------------------------------------------
+-- refresh the display
+-- ---------------------------------------------------------------------------
+function UI.Refresh()
+  local f = UI.frame
+  if not f or not f.target then return end
+  f.waitInfo:Hide()
+
+  local y = -56
+
+  -- step / count
+  f.step:ClearAllPoints(); f.step:SetPoint("TOPLEFT", PAD, y)
+  f.count:ClearAllPoints(); f.count:SetPoint("TOPRIGHT", -PAD, y - 2)
+  y = y - 30
+
+  local n = #ns.Progress.Active()
+  local total = ns.Route.CountRemainingMounts(ns.allTargets or {})
+  local idx = ns.Progress.Index()
+  local cur = ns.Progress.Current()
+
+  -- empty states
+  if not cur then
+    if total == 0 then
+      f.step:SetText("|cff62d06e" .. L["Grats! All farmable mounts collected."] .. "|r")
+    else
+      f.step:SetText(WHITE .. L["Nothing to farm this reset — come back after reset."] .. "|r")
+    end
+    f.step:SetWidth(INNER)
+    f.step:SetWordWrap(true)
+    f.count:SetText("")
+    f.routeBox:Hide()
+    f.doneMark:Hide()
+    f.actionPanel:Hide()
+    f.targetAction:Hide()
+    f.target:SetText("")
+    for _, row in ipairs(UI.rows) do row:Hide() end
+    f.diff:Hide()
+    UI.SetBtn(f.prev, false); UI.SetBtn(f.next, false); UI.SetBtn(f.done, false)
+    ns.Travel.Hide()
+    f.prev:ClearAllPoints(); f.prev:SetPoint("TOPLEFT", PAD, y - 4)
+    f.next:ClearAllPoints(); f.next:SetPoint("TOPRIGHT", -PAD, y - 4)
+    f.done:ClearAllPoints()
+    f.done:SetPoint("LEFT", f.prev, "RIGHT", 8, 0)
+    f.done:SetPoint("RIGHT", f.next, "LEFT", -8, 0)
+    f:SetHeight(-(y - 4 - 28) + 12)
+    return
+  end
+
+  f.step:SetWidth(0); f.step:SetWordWrap(false)
+  f.step:SetText(WHITE .. string.format(L["Step %d / %d"], idx, n) .. "|r")
+  f.count:SetText(GREY .. string.format(L["%d mounts to find"], total) .. "|r")
+
+  local curDone = ns.Progress.IsDone(cur.key)
+
+  -- "wait for reset" step: everything is done this reset but mounts remain.
+  -- Shown only while auto-following (manual nav still browses the done steps),
+  -- so the natural end of the run lands on a clear "come back later" screen.
+  if ns.Progress.AutoFollowing() and not ns.Progress.AnyUndone() then
+    ns.Travel.Hide()
+    ns.Waypoint.Clear()
+    UI.lastGuidedKey = nil
+
+    f.step:SetWidth(0); f.step:SetWordWrap(false)
+    f.step:SetText(WHITE .. string.format(L["Step %d / %d"], n, n) .. "|r")
+    f.count:SetText(GREY .. string.format(L["%d mounts to find"], total) .. "|r")
+
+    f.routeBox:Hide()
+    f.doneMark:Hide()
+    f.actionPanel:Hide()
+    f.targetAction:Hide()
+    f.diff:Hide()
+    for _, row in ipairs(UI.rows) do row:Hide() end
+
+    y = y - 8
+    f.target:ClearAllPoints()
+    f.target:SetPoint("TOPLEFT", PAD, y)
+    f.target:SetWidth(INNER)
+    f.target:SetText("|cff62d06e" .. L["All done for this reset"] .. "|r")
+    y = y - math.max(22, f.target:GetStringHeight()) - 12
+
+    -- guidance + the relevant reset countdown(s)
+    local info = { L["Come back after the reset to continue."] }
+    local daily, weekly = pendingResets()
+    if daily then info[#info + 1] = string.format(L["Daily reset in %s"], UI.Dur(ns.Progress.SecondsUntilDaily())) end
+    if weekly then info[#info + 1] = string.format(L["Weekly reset in %s"], UI.Dur(ns.Progress.SecondsUntilWeekly())) end
+    f.waitInfo:ClearAllPoints()
+    f.waitInfo:SetPoint("TOPLEFT", PAD, y)
+    f.waitInfo:SetWidth(INNER)
+    f.waitInfo:SetText(GREY .. table.concat(info, "\n") .. "|r")
+    f.waitInfo:Show()
+    y = y - f.waitInfo:GetStringHeight() - 16
+
+    -- nav row: let the player step back to review done steps; nothing forward
+    f.prev:ClearAllPoints(); f.prev:SetPoint("TOPLEFT", PAD, y)
+    f.next:ClearAllPoints(); f.next:SetPoint("TOPRIGHT", -PAD, y)
+    f.done:ClearAllPoints()
+    f.done:SetPoint("LEFT", f.prev, "RIGHT", 8, 0)
+    f.done:SetPoint("RIGHT", f.next, "LEFT", -8, 0)
+    UI.SetBtn(f.prev, n > 1)
+    UI.SetBtn(f.next, false)
+    UI.SetBtn(f.done, false)
+    y = y - 28
+
+    f:SetHeight(-y + 12)
+    return
+  end
+
+  -- navigation decision up front (sets ns.Travel.active + the waypoint), so the
+  -- docked action panel can be laid out below; skipped when the step is done.
+  if f:IsShown() and ns.db and ns.db.autoGuide then
+    local inInstance = IsInInstance()
+    if not inInstance then ns.leaveInstanceHint = nil end   -- reset once outside
+
+    if inInstance and ns.leaveInstanceHint then
+      -- boss objective reached in this instance -> guide the player out
+      -- (no FarstriderLib needed: it's just a hearthstone)
+      ns.Travel.ShowAction("item", HEARTHSTONE_ID, L["Leave the instance / Hearthstone"])
+      ns.Waypoint.Clear()
+    elseif inInstance then
+      -- still working on this instance's objective: no prompt, no arrow
+      ns.Travel.Hide()
+      ns.Waypoint.Clear()
+    elseif curDone then
+      ns.Travel.Hide()
+      ns.Waypoint.Clear()
+    elseif ns.Nav.Available() then
+      -- FarstriderLib turn-by-turn; if it can't route (returns false/empty), fall
+      -- back to a plain waypoint to the entrance.
+      if not ns.Nav.Update(cur) then
+        ns.Travel.Hide()
+        if cur.key ~= UI.lastGuidedKey then
+          UI.lastGuidedKey = cur.key
+          ns.Waypoint.GuideTo(cur, true)
+        end
+      end
+    else
+      -- no FarstriderLib: just a waypoint arrow to the entrance
+      ns.Travel.Hide()
+      if cur.key ~= UI.lastGuidedKey then
+        UI.lastGuidedKey = cur.key
+        ns.Waypoint.GuideTo(cur, true)  -- silent
+      end
+    end
+  else
+    ns.Travel.Hide()
+    if curDone then ns.Waypoint.Clear() end
+  end
+
+  -- "done this reset" marker
+  if curDone then
+    f.doneMark:ClearAllPoints()
+    f.doneMark:SetPoint("TOPLEFT", PAD, y)
+    f.doneMark:SetWidth(INNER)
+    f.doneMark:SetText("|cff62d06e" .. (ns.Progress.AnyUndone() and L["Done this reset"] or L["All done for this reset"]) .. "|r")
+    f.doneMark:Show()
+    y = y - 22
+  else
+    f.doneMark:Hide()
+  end
+
+  -- ROUTE box: travel steps as a bullet list (hidden when the step is done)
+  local lines = {}
+  for _, e in ipairs(cur.breadcrumb or {}) do lines[#lines + 1] = "•  " .. ns.LocalizeHop(e.label) end
+  if #lines > 0 and not curDone then
+    f.routeText:SetText(table.concat(lines, "\n"))
+    local textH = math.max(12, f.routeText:GetStringHeight())
+    local boxH = 22 + textH + 8
+    f.routeBox:ClearAllPoints()
+    f.routeBox:SetPoint("TOPLEFT", PAD, y)
+    f.routeBox:SetSize(INNER, boxH)
+    f.routeBox:Show()
+    y = y - boxH - 14
+  else
+    f.routeBox:Hide()
+  end
+
+  -- docked action panel: secure button + "Use X", when a travel action is suggested
+  if ns.Travel.active then
+    f.actionLabel:SetText(ns.Travel.label or "")
+    f.actionPanel:ClearAllPoints()
+    f.actionPanel:SetPoint("TOPLEFT", PAD, y)
+    f.actionPanel:SetSize(INNER, 42)
+    f.actionPanel:Show()
+    y = y - 42 - 14
+  else
+    f.actionPanel:Hide()
+  end
+
+  -- target headline: dim action line, then big amber name line (wraps if long)
+  local action, name = targetParts(cur)
+  if action then
+    f.targetAction:ClearAllPoints()
+    f.targetAction:SetPoint("TOPLEFT", PAD, y)
+    f.targetAction:SetWidth(INNER)
+    f.targetAction:SetText(action)
+    f.targetAction:Show()
+    y = y - 16
+  else
+    f.targetAction:Hide()
+  end
+  f.target:ClearAllPoints()
+  f.target:SetPoint("TOPLEFT", PAD, y)
+  f.target:SetWidth(INNER)
+  f.target:SetText(AMBER .. name .. "|r")
+  y = y - math.max(22, f.target:GetStringHeight()) - 14
+
+  -- boss rows (dimmed when the step is done)
+  local rowAlpha = curDone and 0.4 or 1
+  local badgeLabel, isMythic = diffBadge(cur)
+  local shown = 0
+  for i, boss in ipairs(cur.bosses) do
+    local row = UI.rows[i]
+    if not row then break end
+    row:SetAlpha(rowAlpha)
+    row.data = boss
+    row.noteText = boss.note or ""
+    row.icon:SetTexture("Interface\\Icons\\" .. (boss.icon or "INV_Misc_QuestionMark"))
+    local rc = boss.epic and C_EPIC or C_RARE
+    row.iconFrame:SetBackdropBorderColor(rc[1], rc[2], rc[3], 0.9)
+    row.name:SetText(mountName(boss))
+    row.boss:SetText(GREY .. (bossName(boss) or "-") .. "|r")
+
+    -- difficulty badge only on the first row
+    if i == 1 and badgeLabel then
+      local col = isMythic and { 1.0, 0.5, 0.0 } or { 0.90, 0.30, 0.30 }
+      row.badgeText:SetText(badgeLabel)
+      row.badgeText:SetTextColor(col[1] + 0.05, col[2] + 0.3, col[3] + 0.3)
+      row.badge:SetWidth(row.badgeText:GetStringWidth() + 16)
+      row.badge:SetBackdropColor(col[1] * 0.45, col[2] * 0.30, col[3] * 0.30, 0.85)
+      row.badge:SetBackdropBorderColor(col[1], col[2], col[3], 0.9)
+      row.badge:Show()
+      row.name:ClearAllPoints()
+      row.name:SetPoint("TOPLEFT", row.iconFrame, "TOPRIGHT", 10, -1)
+      row.name:SetPoint("RIGHT", row.badge, "LEFT", -8, 0)
+    else
+      row.badge:Hide()
+      row.name:ClearAllPoints()
+      row.name:SetPoint("TOPLEFT", row.iconFrame, "TOPRIGHT", 10, -1)
+      row.name:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    end
+
+    row:ClearAllPoints()
+    row:SetPoint("TOPLEFT", PAD, y)
+    row:Show()
+    y = y - 44
+    shown = i
+  end
+  for i = shown + 1, #UI.rows do UI.rows[i]:Hide() end
+  if #cur.bosses > MAX_ROWS then
+    UI.rows[MAX_ROWS].boss:SetText(GREY .. string.format(L["(+%d more mounts here)"], #cur.bosses - MAX_ROWS) .. "|r")
+  end
+
+  -- difficulty switch button (only when needed and the step isn't done)
+  if not curDone and ns.Difficulty.NeedsSwitch(cur) then
+    f.diff.label:SetText(ns.Difficulty.SwitchLabel(cur))
+    f.diff:ClearAllPoints()
+    f.diff:SetPoint("TOPLEFT", PAD, y - 2)
+    f.diff:SetWidth(INNER)
+    f.diff:Show()
+    y = y - 34
+  else
+    f.diff:Hide()
+  end
+
+  -- bottom nav row
+  y = y - 10
+  f.prev:ClearAllPoints(); f.prev:SetPoint("TOPLEFT", PAD, y)
+  f.next:ClearAllPoints(); f.next:SetPoint("TOPRIGHT", -PAD, y)
+  f.done:ClearAllPoints()
+  f.done:SetPoint("LEFT", f.prev, "RIGHT", 8, 0)
+  f.done:SetPoint("RIGHT", f.next, "LEFT", -8, 0)
+  UI.SetBtn(f.prev, idx > 1)
+  UI.SetBtn(f.next, idx < n)
+  UI.SetBtn(f.done, not curDone)
+  y = y - 28
+
+  f:SetHeight(-y + 12)
+end
+
+-- ---------------------------------------------------------------------------
+-- show / hide
+-- ---------------------------------------------------------------------------
+function UI.Show()
+  if not UI.frame then UI.Init() end
+  if ns.db then ns.db.shown = true end
+  UI.frame:Show()
+  UI.Refresh()
+end
+
+function UI.Hide()
+  if ns.db then ns.db.shown = false end
+  if UI.frame then UI.frame:Hide() end
+  if ns.Travel then ns.Travel.Hide() end
+end
+
+function UI.Toggle()
+  if not UI.frame then UI.Init() end
+  if UI.frame:IsShown() then UI.Hide() else UI.Show() end
+end
+
+-- ---------------------------------------------------------------------------
+-- options: registered in the game's Settings panel (AddOns category)
+-- ---------------------------------------------------------------------------
+function UI.BuildSettings()
+  if UI.settingsCategory then return end
+  if not (Settings and Settings.RegisterVerticalLayoutCategory and Settings.RegisterProxySetting) then return end
+
+  local category, layout = Settings.RegisterVerticalLayoutCategory(L["EasyMountFarmer"])
+  UI.settingsCategory = category
+
+  local function boolean(variable, name, getter, setter)
+    local setting = Settings.RegisterProxySetting(category, "EasyMountFarmer_" .. variable,
+      Settings.VarType.Boolean, name, true, getter, setter)
+    Settings.CreateCheckbox(category, setting)
+  end
+
+  boolean("autoAdvance", L["Auto-advance to the next step"],
+    function() return ns.db.autoAdvance ~= false end,
+    function(v) ns.db.autoAdvance = v; if ns.UI.Refresh then ns.UI.Refresh() end end)
+
+  -- TomTom checkbox only when TomTom is installed
+  if TomTom and TomTom.AddWaypoint then
+    boolean("useTomTom", L["Use TomTom"],
+      function() return ns.db.useTomTom ~= false end,
+      function(v) ns.db.useTomTom = v; UI.lastGuidedKey = nil; if ns.UI.Refresh then ns.UI.Refresh() end end)
+  end
+
+  boolean("lootPopup", L["Show the loot notification"],
+    function() return ns.db.lootPopup ~= false end,
+    function(v) ns.db.lootPopup = v end)
+
+  boolean("autoGuide", L["Auto-guide (waypoint / action)"],
+    function() return ns.db.autoGuide ~= false end,
+    function(v) ns.db.autoGuide = v; UI.lastGuidedKey = nil; if ns.UI.Refresh then ns.UI.Refresh() end end)
+
+  boolean("showMinimap", L["Show the minimap button"],
+    function() return not (ns.db.minimap and ns.db.minimap.hide) end,
+    function(v)
+      ns.db.minimap = ns.db.minimap or {}
+      ns.db.minimap.hide = not v
+      if ns.Minimap then
+        if not ns.Minimap.button and ns.Minimap.Init then ns.Minimap.Init() end
+        if ns.Minimap.button then ns.Minimap.button:SetShown(v) end
+      end
+    end)
+
+  -- loot announce channel (dropdown)
+  if Settings.CreateDropdown and Settings.CreateControlTextContainer then
+    local chan = Settings.RegisterProxySetting(category, "EasyMountFarmer_lootChannel",
+      Settings.VarType.String, L["Announce loot in channel"], "NONE",
+      function() return ns.db.lootChannel or "NONE" end,
+      function(v) ns.db.lootChannel = v end)
+    local function options()
+      local c = Settings.CreateControlTextContainer()
+      c:Add("NONE", L["Do not announce"])
+      c:Add("PARTY", L["Party"])
+      c:Add("RAID", L["Raid"])
+      c:Add("GUILD", L["Guild"])
+      return c:GetData()
+    end
+    Settings.CreateDropdown(category, chan, options)
+  end
+
+  Settings.RegisterAddOnCategory(category)
+end
+
+function UI.OpenSettings()
+  UI.BuildSettings()
+  if UI.settingsCategory and Settings and Settings.OpenToCategory then
+    Settings.OpenToCategory(UI.settingsCategory:GetID())
+  end
+end
+
+-- ---------------------------------------------------------------------------
+-- loot popup
+-- ---------------------------------------------------------------------------
+function UI.ShowLootPopup(name, icon)
+  local p = UI.popup
+  if not p then
+    p = CreateFrame("Frame", "EasyMountFarmerPopup", UIParent, "BackdropTemplate")
+    p:SetSize(320, 74)
+    p:SetPoint("TOP", 0, -200)
+    p:SetFrameStrata("DIALOG")
+    p:SetBackdrop(BD1)
+    p:SetBackdropColor(C_BG[1], C_BG[2], C_BG[3], 0.98)
+    p:SetBackdropBorderColor(C_GOLD_BRD[1], C_GOLD_BRD[2], C_GOLD_BRD[3], 1)
+    p.iconFrame = makePanel(p)
+    p.iconFrame:SetSize(46, 46)
+    p.iconFrame:SetPoint("LEFT", 14, 0)
+    p.iconFrame:SetBackdropColor(0, 0, 0, 0.5)
+    p.iconFrame:SetBackdropBorderColor(C_EPIC[1], C_EPIC[2], C_EPIC[3], 0.9)
+    p.icon = p.iconFrame:CreateTexture(nil, "ARTWORK")
+    p.icon:SetPoint("TOPLEFT", 2, -2)
+    p.icon:SetPoint("BOTTOMRIGHT", -2, 2)
+    p.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    p.text = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    p.text:SetPoint("LEFT", p.iconFrame, "RIGHT", 12, 0)
+    p.text:SetPoint("RIGHT", -12, 0)
+    p.text:SetJustifyH("LEFT")
+    UI.popup = p
+  end
+  p.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+  p.text:SetText("|cff62d06e" .. L["Mount obtained!"] .. "|r\n" .. WHITE .. (name or "") .. "|r")
+  p:Show()
+  if p.timer then p.timer:Cancel() end
+  p.timer = C_Timer.NewTimer(7, function() p:Hide() end)
+  if PlaySound and SOUNDKIT then
+    pcall(PlaySound, SOUNDKIT.UI_EPICLOOT_TOAST)
+  end
+end

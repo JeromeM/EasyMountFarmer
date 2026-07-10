@@ -7,7 +7,7 @@ local Lockouts = ns.Lockouts
 
 function Lockouts.Scan()
   if not ns.charDB or not ns.Progress then return end
-  local loc = SAMountsLocations or {}
+  local loc = EasyMountFarmerLocations or {}
 
   -- Match saved instances by stable instanceId (locale-independent), with the
   -- English lockout name only as a fallback for enUS clients.
@@ -21,6 +21,13 @@ function Lockouts.Scan()
   end
   if not next(byInstanceId) and not next(byName) then return end
 
+  -- The instance we are standing in right now: being saved to it does NOT mean
+  -- the mount boss is dead (we may be mid-run and still able to kill it), so we
+  -- never lock-mark the current instance -- only a real boss kill (ENCOUNTER_END,
+  -- source "kill") marks it. We also drop a stale lock-mark left on it.
+  local insideId
+  if IsInInstance() then insideId = select(8, GetInstanceInfo()) end
+
   local changed = false
   for i = 1, GetNumSavedInstances() do
     local info = { GetSavedInstanceInfo(i) }
@@ -28,8 +35,13 @@ function Lockouts.Scan()
     if locked and reset and reset > 0 then
       local t = (instanceId and byInstanceId[instanceId]) or (name and byName[name])
       if t then
-        ns.charDB.doneRuns[t.key] = { at = time(), type = t.type or "Raid" }
-        changed = true
+        if insideId and instanceId == insideId then
+          local d = ns.charDB.doneRuns[t.key]
+          if d and d.source == "lock" then ns.charDB.doneRuns[t.key] = nil; changed = true end
+        elseif not ns.charDB.doneRuns[t.key] then
+          ns.charDB.doneRuns[t.key] = { at = time(), type = ns.Progress.ResetTypeFor(t.key, t.type), source = "lock" }
+          changed = true
+        end
       end
     end
   end

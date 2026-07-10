@@ -27,7 +27,7 @@ local SETTERS = {
 
 local function locFor(target)
   if not target then return nil end
-  return (SAMountsLocations or {})[target.key]
+  return (EasyMountFarmerLocations or {})[target.key]
 end
 
 function Difficulty.GetCurrent(scope)

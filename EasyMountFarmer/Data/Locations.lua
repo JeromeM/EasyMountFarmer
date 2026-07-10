@@ -15,7 +15,7 @@
 -- Coordinates are entrance-portal estimates (0-100); a few are marked "-- unsure". World bosses have
 -- no ENCOUNTER_END and are not in GetSavedInstanceInfo, so lockout=nil and encounters={} for them.
 
-SAMountsLocations = {
+EasyMountFarmerLocations = {
   ["Run Vortex Pinnacle (Dungeon)"] = {
     map = 249, x = 76.6, y = 84.3,   -- Uldum
     lockout = "The Vortex Pinnacle",
@@ -271,6 +271,7 @@ SAMountsLocations = {
   ["Run King's Rest (Dungeon)"] = {
     map = 862, x = 37.0, y = 39.0,   -- Zuldazar
     lockout = "Kings' Rest",  -- in-game name uses "Kings'"
+    instanceId = 1762,
     reqDiff = 23, diffScope = "dungeon",  -- Mythic only
     encounters = { [266058] = 2143 },  -- Dazar, The First King -> Mummified Raptor Skull
   },
@@ -283,11 +284,17 @@ SAMountsLocations = {
   ["Run Mechagon: Junkyard (Dungeon)"] = {
     map = 1462, x = 73.1, y = 36.3,   -- Mechagon Island (Rustbolt)
     lockout = "Operation: Mechagon",  -- M+ wings are separate maps
+    instanceId = 2097,
     reqDiff = 23, diffScope = "dungeon",  -- Mythic only
     encounters = { [299158] = 2291, [290718] = 2260 },  -- HK-8 ; King Mechagon
   },
   ["Run Ny'alotha the Waking City (Raid)"] = {
-    map = 1527, x = 55.1, y = 43.8,   -- Uldum (N'Zoth assault); Vale (1530) ~41.6,45.5
+    -- The raid portal follows the weekly N'Zoth assault, alternating between the
+    -- Vale of Eternal Blossoms (1530) and Uldum (1527). entranceJID + entranceMaps
+    -- let Nav/Waypoint resolve the live entrance from the game each week; map/x/y
+    -- below is only the fallback (Vale, the confirmed default).
+    entranceJID = 1180, entranceMaps = { 1530, 1527 },
+    map = 1530, x = 40.0, y = 45.6,   -- Vale of Eternal Blossoms (fallback)
     lockout = "Ny'alotha, the Waking City",
     instanceId = 2217,
     reqDiff = 16, diffScope = "raid",  -- Mythic only
@@ -361,7 +368,7 @@ SAMountsLocations = {
   ["Run Manaforge Omega (Raid)"] = {
     map = 2371, x = 42.0, y = 21.5,   -- K'aresh (Shadow Point) -- unsure coords
     lockout = "Manaforge Omega",
-    -- instanceId TODO (recent raid): run /sam debug while saved to read it; needed for non-enUS auto-skip
+    -- instanceId TODO (recent raid): run /emf debug while saved to read it; needed for non-enUS auto-skip
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [1234573] = 3135 },  -- Dimensius -> Unbound Star-Eater
   },
@@ -374,7 +381,7 @@ SAMountsLocations = {
   ["Run March on Quel'Danas (Raid)"] = {
     map = 2424, x = 52.7, y = 84.9,   -- Isle of Quel'Danas (Midnight) -- unsure (preview)
     lockout = "March on Quel'Danas",
-    -- instanceId TODO (recent raid): run /sam debug while saved to read it; needed for non-enUS auto-skip
+    -- instanceId TODO (recent raid): run /emf debug while saved to read it; needed for non-enUS auto-skip
     reqDiff = 16, diffScope = "raid",  -- Mythic only
     encounters = { [1242904] = 3182 },  -- -> Ashes of Belo'ren -- unsure (preview)
   },

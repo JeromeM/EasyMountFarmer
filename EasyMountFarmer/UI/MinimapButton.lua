@@ -18,7 +18,7 @@ function Minimap.Init()
   if Minimap.button then return end
   ns.db.minimap = ns.db.minimap or {}
 
-  local btn = CreateFrame("Button", "SAMountsMinimapButton", _G.Minimap)
+  local btn = CreateFrame("Button", "EasyMountFarmerMinimapButton", _G.Minimap)
   Minimap.button = btn
   btn:SetSize(31, 31)
   btn:SetFrameStrata("MEDIUM")
@@ -40,7 +40,7 @@ function Minimap.Init()
   btn:SetScript("OnClick", function(_, mouseButton)
     if mouseButton == "RightButton" then
       ns.Progress.ResetAllDone()
-      ns.Print(L["Per-reset progress cleared."])
+      ns.Print(L["Re-synced to the first step to do."])
     else
       ns.UI.Toggle()
     end
@@ -60,9 +60,9 @@ function Minimap.Init()
 
   btn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:AddLine(L["SAMounts"])
+    GameTooltip:AddLine(L["EasyMountFarmer"])
     GameTooltip:AddLine(L["Left-click: open/close"], 1, 1, 1)
-    GameTooltip:AddLine(L["Right-click: reset this-reset progress"], 1, 1, 1)
+    GameTooltip:AddLine(L["Right-click: jump to the next step to do"], 1, 1, 1)
     GameTooltip:Show()
   end)
   btn:SetScript("OnLeave", GameTooltip_Hide)
