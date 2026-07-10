@@ -743,6 +743,11 @@ end
 function UI.Refresh()
   local f = UI.frame
   if not f or not f.target then return end
+  -- Do nothing in combat: the layout touches the docked secure action button, whose
+  -- position/visibility can't change mid-combat (a half-applied refresh breaks the
+  -- window). Travel.lua re-runs Refresh on PLAYER_REGEN_ENABLED, so it reflows once
+  -- combat ends. Navigation (prev/next) still updates the pointer; only the redraw waits.
+  if InCombatLockdown() then return end
   f.waitInfo:Hide()
 
   local y = -56
