@@ -28,7 +28,7 @@ const OUT_WORLD = join(ROOT, 'EasyMountFarmer', 'Data', 'MountsWorld.lua');
 // EJ world-boss "instances" are named after the expansion/continent (frFR dev data).
 const WORLD_BOSS_INSTANCES = new Set(['Pandarie', 'Draenor', 'Azeroth']);
 // mountIDs handled by hand in ExtraMounts.lua (Ahn'Qiraj tanks + Amani Battle Bear).
-const EXTRA_MOUNT_IDS = new Set([110, 117, 118, 119, 120, 400]);
+const EXTRA_MOUNT_IDS = new Set([117, 118, 119, 120, 122, 419]);
 
 // --- evaluate a luaparse table-literal AST into a plain JS value ---------------
 function evalNode(node) {
@@ -181,9 +181,39 @@ const instances = orderInstances(mounts.map((m) => ({
   diff: m.diff ?? null,
 })));
 
+// Pull the zone/region name out of a mount's source text ("Région : X" / "Zone : X" /
+// "Lieu : X"), so a world rare can be slotted next to the tour stop in the same zone.
+function parseRegion(s) {
+  const m = (s || '').match(/(?:R[ée]gion|Zone|Lieu)\s*:\s*([^/]+)/i);
+  return m ? m[1].trim() : null;
+}
+
+// The vendor's name for a purchasable mount ("Vendeur/Vendeuse : X").
+function parseVendor(s) {
+  const m = (s || '').match(/Vende(?:ur|use)\s*:\s*([^/]+)/i);
+  return m ? m[1].trim() : null;
+}
+
+// Classify a world-drop mount from its source text into a farmable sub-category.
+// (Achievement-reward mounts aren't "Butin :" drops, so the generator never collects
+// them — the "achievement" category stays empty until the generator is extended.)
+function classifyWorld(s) {
+  s = s || '';
+  if (/F[êe]te\s*:|[ÉE]v[èé]nement saisonnier/i.test(s)) return 'event';
+  if (/Vende(?:ur|use)|Marchand|Prix\s*:/i.test(s)) return 'vendor';
+  if (/tr[ée]sor|cache|coffre|caisse|sac de|butin de guerre/i.test(s)) return 'treasure';
+  return 'rare';   // drops from a named rare NPC
+}
+
 const world = orphans
   .filter((o) => !EXTRA_MOUNT_IDS.has(o.mountID))
-  .map((o) => ({ category: 'worldrare', mountID: o.mountID, mount: o.mount, source: cleanSource(o.source) }))
+  .map((o) => {
+    const source = cleanSource(o.source);
+    return {
+      category: classifyWorld(source), mountID: o.mountID, mount: o.mount, source,
+      zoneName: parseRegion(source), vendor: parseVendor(source),
+    };
+  })
   .sort((a, b) => (a.mount || '').localeCompare(b.mount || ''));
 
 writeLua(OUT_INST, 'EasyMountFarmerInstances', instances,

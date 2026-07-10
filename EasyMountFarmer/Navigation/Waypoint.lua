@@ -40,18 +40,19 @@ local function liveEntrance(l)
   end
 end
 
---- Resolve the effective entrance coords (0-100) for a run key: live
---- Encounter-Journal resolution first, then the static Locations coords as a fallback.
----@param key string  Locations key identifying the run
+--- Resolve the effective entrance coords (0-100) for a target key: live
+--- Encounter-Journal resolution first (moving portals), then the target's static
+--- coords (from the generated data / Overrides) as a fallback.
+---@param key string  target key identifying the run (index into ns.targetsByKey)
 ---@return number? mapId  uiMapID of the entrance map, or nil if unknown
 ---@return number? x  entrance X coordinate in 0-100
 ---@return number? y  entrance Y coordinate in 0-100
 function ns.EntranceFor(key)
-  local l = (EasyMountFarmerLocations or {})[key]
-  if not l then return end
-  local m, x, y = liveEntrance(l)
+  local t = ns.targetsByKey and ns.targetsByKey[key]
+  if not t then return end
+  local m, x, y = liveEntrance(t)
   if m then return m, x, y end
-  if l.map and l.x and l.y then return l.map, l.x, l.y end
+  if t.map and t.x and t.y then return t.map, t.x, t.y end
 end
 
 --- Remove the waypoint WE set (if any), leaving player-placed waypoints intact.
@@ -96,8 +97,8 @@ function Waypoint.SetTo(mapID, x, y, title)
   end
 end
 
---- Guide to the target's entrance (from Locations coords, 0-100): resolve the
---- coords then place a waypoint, printing a message on failure unless silent.
+--- Guide to the target's entrance (0-100 coords): resolve the coords then place a
+--- waypoint, printing a message on failure unless silent.
 ---@param target table  run entry with key and title fields
 ---@param silent boolean?  suppress user-facing error messages when true
 function Waypoint.GuideTo(target, silent)
@@ -105,7 +106,7 @@ function Waypoint.GuideTo(target, silent)
   local map, x, y = ns.EntranceFor(target.key)
   if not map or not x or not y then
     if not silent then
-      ns.Print(string.format(L["No coordinates for \"%s\" (fill them in Locations.lua)."], target.title or "?"))
+      ns.Print(string.format(L["No coordinates for \"%s\"."], target.title or "?"))
     end
     return
   end

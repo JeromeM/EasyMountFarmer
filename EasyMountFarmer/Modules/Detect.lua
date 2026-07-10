@@ -5,27 +5,36 @@ local ADDON, ns = ...
 ns.Detect = ns.Detect or {}
 local Detect = ns.Detect
 
---- Find the active target whose boss matches this encounterID.
+--- Find the active target (and its boss row) whose still-needed mount drops from
+--- this encounterID. Only still-needed mounts are considered (collected ones are
+--- already pruned from the target's bosses).
 ---@param encounterID number  encounter journal ID from ENCOUNTER_END
 ---@return table? target  the matching target from ns.allTargets, or nil if none
----@return table? location  its EasyMountFarmerLocations entry, or nil if none
-local function targetForEncounter(encounterID)
-  local loc = EasyMountFarmerLocations or {}
+---@return table? boss  the matching boss row, or nil if none
+local function bossForEncounter(encounterID)
   for _, t in ipairs(ns.allTargets or {}) do
-    local l = loc[t.key]
-    if l and l.encounters then
-      for _, encID in pairs(l.encounters) do
-        if encID == encounterID then return t, l end
-      end
+    for _, b in ipairs(t.bosses or {}) do
+      if b.encounterID == encounterID then return t, b end
     end
   end
   return nil
 end
 
---- Handle ENCOUNTER_END: on a successful kill of a boss belonging to an active
---- target, mark that run done (source "kill"). Only counts on a difficulty where
---- the mount can drop; a Mythic Keystone (8) also satisfies a Mythic (23)
---- requirement.
+--- Report whether a mount that drops on `difficulties` could have dropped on the
+--- difficulty just cleared. A Mythic Keystone (8) also satisfies a Mythic (23).
+---@param difficulties number[]?  the difficultyIDs the mount drops on
+---@param difficultyID number?  the difficulty the encounter was fought on
+---@return boolean  true if the mount could have dropped
+local function difficultyDrops(difficulties, difficultyID)
+  if not difficulties or #difficulties == 0 or not difficultyID then return true end
+  for _, d in ipairs(difficulties) do
+    if d == difficultyID or (d == 23 and difficultyID == 8) then return true end
+  end
+  return false
+end
+
+--- Handle ENCOUNTER_END: on a successful kill of a boss whose still-needed mount
+--- could have dropped on the cleared difficulty, mark that run done (source "kill").
 ---@param encounterID number  encounter journal ID of the boss
 ---@param encName string  encounter name
 ---@param difficultyID number  difficulty the encounter was fought on
@@ -38,14 +47,9 @@ local function onEncounterEnd(encounterID, encName, difficultyID, _, success)
     ns.Print(string.format("ENCOUNTER_END: id=|cffffff00%s|r  name=%s  diff=%s",
       tostring(encounterID), tostring(encName), tostring(difficultyID)))
   end
-  local t, l = targetForEncounter(encounterID)
+  local t, b = bossForEncounter(encounterID)
   if not t then return end
-  -- count the kill only on a difficulty where the mount can drop; a Mythic
-  -- Keystone (8) also satisfies a Mythic (23) requirement.
-  if l.reqDiff and difficultyID and difficultyID ~= l.reqDiff
-     and not (l.reqDiff == 23 and difficultyID == 8) then
-    return
-  end
+  if not difficultyDrops(b.difficulties, difficultyID) then return end
   ns.Progress.MarkDone(t.key, t.type, "kill")
 end
 

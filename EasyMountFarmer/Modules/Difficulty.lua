@@ -25,12 +25,12 @@ local SETTERS = {
   legacyRaid = "SetLegacyRaidDifficultyID",
 }
 
---- Look up the Locations entry for a target.
----@param target table?  a target from ns.allTargets (uses its `key` field)
----@return table?  the matching EasyMountFarmerLocations entry, or nil if none
+--- Return the difficulty source for a target. Difficulty is now derived and stored
+--- on the target itself (target.reqDiff / target.diffScope), so this just returns it.
+---@param target table?  a target from ns.allTargets
+---@return table?  the target (carrying reqDiff / diffScope), or nil if none
 local function locFor(target)
-  if not target then return nil end
-  return (EasyMountFarmerLocations or {})[target.key]
+  return target
 end
 
 --- Get the player's current difficulty ID for a given scope.

@@ -12,17 +12,13 @@ local Lockouts = ns.Lockouts
 --- changed.
 function Lockouts.Scan()
   if not ns.charDB or not ns.Progress then return end
-  local loc = EasyMountFarmerLocations or {}
 
   -- Match saved instances by stable instanceId (locale-independent), with the
-  -- English lockout name only as a fallback for enUS clients.
+  -- instance's own (already localized) name as a fallback for runs lacking an id.
   local byInstanceId, byName = {}, {}
   for _, t in ipairs(ns.allTargets or {}) do
-    local l = loc[t.key]
-    if l then
-      if l.instanceId then byInstanceId[l.instanceId] = t end
-      if l.lockout then byName[l.lockout] = t end
-    end
+    if t.instanceId then byInstanceId[t.instanceId] = t end
+    if t.instance then byName[t.instance] = t end
   end
   if not next(byInstanceId) and not next(byName) then return end
 

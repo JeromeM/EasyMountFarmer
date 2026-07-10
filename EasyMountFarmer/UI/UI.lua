@@ -45,14 +45,25 @@ local BD1 = {
 -- ---------------------------------------------------------------------------
 
 --- Resolve the localized mount name from its journal id; falls back to the stored name.
----@param boss table  a mount/boss entry (has .ID journal id and .mount fallback name)
+---@param boss table  a mount/boss entry (has .mountID journal id and .mount fallback name)
 ---@return string  the localized mount name, or "?" if unknown
 local function mountName(boss)
-  if boss.ID and C_MountJournal and C_MountJournal.GetMountInfoByID then
-    local ok, name = pcall(C_MountJournal.GetMountInfoByID, boss.ID)
+  if boss.mountID and C_MountJournal and C_MountJournal.GetMountInfoByID then
+    local ok, name = pcall(C_MountJournal.GetMountInfoByID, boss.mountID)
     if ok and name and name ~= "" then return name end
   end
   return boss.mount or "?"
+end
+
+--- Resolve a mount's icon texture from its journal id (the 3rd GetMountInfoByID return).
+---@param boss table  a mount/boss entry (has .mountID)
+---@return number|string  the icon fileID/path, or a question-mark fallback
+local function iconFor(boss)
+  if boss.mountID and C_MountJournal and C_MountJournal.GetMountInfoByID then
+    local ok, _, _, icon = pcall(C_MountJournal.GetMountInfoByID, boss.mountID)
+    if ok and icon then return icon end
+  end
+  return "Interface\\Icons\\INV_Misc_QuestionMark"
 end
 
 --- Split a mount's localized source text into its individual lines. The source is
@@ -102,76 +113,89 @@ end
 
 --- Resolve the localized boss name for a mount from its first source line,
 --- falling back to the stored boss name.
----@param boss table  a mount/boss entry (has .ID journal id and .name fallback)
+---@param boss table  a mount/boss entry (has .mountID journal id and .name fallback)
 ---@return string?  the localized boss name, or nil if unknown
 local function bossName(boss)
-  local lines = sourceLines(boss.ID)
+  local lines = sourceLines(boss.mountID)
   local b = lines and lines[1] and stripLabel(lines[1])
   if b then return b end
   return (boss.name and boss.name ~= "" and boss.name) or nil
 end
 
---- Clean the English run title for use as a fallback name:
---- "Run Freehold (Dungeon)" -> "Freehold".
----@param title string?  the raw run title
----@return string  the cleaned title, or "?" if nil
-local function cleanTitle(title)
-  if not title then return "?" end
-  title = title:gsub("^Run%s+", "")
-  title = title:gsub("%s*%b()%s*$", "")
-  return title
-end
-
---- Resolve the localized instance name for a target. Priority: an explicit locale
---- override for the cleaned title (for cases the game's source text doesn't resolve),
---- then the first mount's 2nd source line, then the cleaned English run title.
----@param target table  a farm target (has .title and .bosses)
+--- Resolve the localized instance name for a target. Generated data already stores
+--- a localized name; hand-authored trash instances carry an English one, so for those
+--- we prefer the mount's localized source "location" line, then a locale override.
+---@param target table  a farm target (has .instance, .category, .title and .bosses)
 ---@return string  the localized instance name
 local function instanceName(target)
-  local clean = cleanTitle(target.title)
-  local tr = L[clean]
-  if tr and tr ~= clean then return tr end
   local first = target.bosses and target.bosses[1]
+  if target.category == "trash" then
+    if first then
+      local lines = sourceLines(first.mountID)
+      local s = lines and lines[2] and stripLabel(lines[2])
+      if s and s ~= "" then return s end
+    end
+    local inst = target.instance
+    local tr = inst and L[inst]
+    if tr and tr ~= inst then return tr end
+    return inst or "?"
+  end
+  if target.instance and target.instance ~= "" then return target.instance end
   if first then
-    local lines = sourceLines(first.ID)
+    local lines = sourceLines(first.mountID)
     if lines and lines[2] then
       local inst = stripLabel(lines[2])
       if inst then return inst end
     end
   end
-  return clean
+  return target.title or "?"
 end
 
 --- Build the localized headline for a target, split into an action line and a name line.
---- Handles world bosses (kill the boss), dungeons, and raids; other types have no action.
----@param target table  a farm target (has .key, .type, .title, .bosses)
+--- Handles world bosses / rares (name the mount's boss), dungeons and raids.
+---@param target table  a farm target (has .category, .bosses, .instance)
 ---@return string? action  the localized action line (e.g. "Do the dungeon"), or nil
 ---@return string name  the localized, capitalized target name
 local function targetParts(target)
-  local l = (EasyMountFarmerLocations or {})[target.key]
-  if l and l.questId then
+  local cat = target.category
+  if cat == "worldboss" then
     -- world boss: the name is the BOSS (source line 1), not its zone
     local first = target.bosses and target.bosses[1]
     local bn = (first and bossName(first)) or instanceName(target)
     return L["Kill the world boss"], capitalize(bn)
   end
+  if cat == "rare" or cat == "treasure" or cat == "vendor" or cat == "event" then
+    local first = target.bosses and target.bosses[1]
+    local label = (cat == "rare" and L["Rare enemy"]) or (cat == "treasure" and L["Treasure"])
+      or (cat == "vendor" and L["Vendor"]) or L["Seasonal event"]
+    if cat == "vendor" and target.vendor then label = label .. " · " .. target.vendor end
+    if target.zoneName and target.zoneName ~= "" then label = label .. " · " .. target.zoneName end
+    -- rare/treasure: name the source (NPC / treasure); vendor/event: name the mount
+    local name
+    if cat == "rare" or cat == "treasure" then
+      name = (first and bossName(first)) or (first and mountName(first)) or instanceName(target)
+    else
+      name = (first and mountName(first)) or instanceName(target)
+    end
+    return label, capitalize(name)
+  end
   local inst = capitalize(instanceName(target))
-  local t = target.type or ""
-  if t:find("Dungeon") then return L["Do the dungeon"], inst end
-  if t:find("Raid") then return L["Do the raid"], inst end
+  if cat == "dungeon" then return L["Do the dungeon"], inst end
+  if cat == "raid" or cat == "trash" then return L["Do the raid"], inst end
   return nil, inst
 end
 
---- Resolve the localized required-difficulty label for a target via the game.
----@param target table  a farm target (has .key)
+--- Resolve the localized required-difficulty label for a target via the game. The
+--- required difficulty is derived and stored on the target (target.reqDiff).
+---@param target table  a farm target (has .reqDiff)
 ---@return string? name  the localized difficulty name, or nil if not worth a badge
 ---@return boolean? isMythic  true when the required difficulty is a Mythic tier
 local function diffBadge(target)
-  local l = (EasyMountFarmerLocations or {})[target.key]
-  if not l or not l.reqDiff or NORMAL_DIFFS[l.reqDiff] then return nil end
+  local req = target and target.reqDiff
+  if not req or NORMAL_DIFFS[req] then return nil end
   if GetDifficultyInfo then
-    local ok, name = pcall(GetDifficultyInfo, l.reqDiff)
-    if ok and name and name ~= "" then return name, MYTHIC_DIFFS[l.reqDiff] end
+    local ok, name = pcall(GetDifficultyInfo, req)
+    if ok and name and name ~= "" then return name, MYTHIC_DIFFS[req] end
   end
   return nil
 end
@@ -250,6 +274,49 @@ local function makePanel(parent)
   return p
 end
 
+-- flat check row (checkbox + label), matching the window's look
+local C_CHK_ON = { 0.24, 0.17, 0.05 }   -- amber fill when ticked
+local C_CHK_OFF = { 0.12, 0.12, 0.15 }
+
+--- Repaint a check row to reflect its ticked state.
+---@param row Frame  a row from makeCheckRow
+---@param checked boolean  whether the row is ticked
+local function paintCheck(row, checked)
+  local bg = checked and C_CHK_ON or C_CHK_OFF
+  row.box:SetBackdropColor(bg[1], bg[2], bg[3], 0.95)
+  local brd = checked and C_GOLD_BRD or C_PANEL_BRD
+  row.box:SetBackdropBorderColor(brd[1], brd[2], brd[3], 1)
+  row.check:SetShown(checked)
+  if checked then
+    row.text:SetTextColor(C_AMBER_TX[1], C_AMBER_TX[2], C_AMBER_TX[3])
+  else
+    row.text:SetTextColor(0.55, 0.55, 0.60)
+  end
+end
+
+--- Create a flat check row (clickable checkbox + label) in a parent.
+---@param parent Frame  the parent frame
+---@param label string  the row label
+---@param width number  the row width
+---@return Frame  the row (with .box, .check, .text; use paintCheck to set its state)
+local function makeCheckRow(parent, label, width)
+  local row = CreateFrame("Button", nil, parent)
+  row:SetSize(width, 20)
+  row.box = makePanel(row)
+  row.box:SetSize(15, 15)
+  row.box:SetPoint("LEFT", 4, 0)
+  row.check = row.box:CreateTexture(nil, "OVERLAY")
+  row.check:SetPoint("CENTER")
+  row.check:SetSize(16, 16)
+  row.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+  row.text = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  row.text:SetPoint("LEFT", row.box, "RIGHT", 8, 0)
+  row.text:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+  row.text:SetJustifyH("LEFT")
+  row.text:SetText(label)
+  return row
+end
+
 -- ---------------------------------------------------------------------------
 -- position persistence
 -- ---------------------------------------------------------------------------
@@ -271,6 +338,103 @@ function UI.RestorePosition()
 end
 
 -- ---------------------------------------------------------------------------
+-- filter panel (in-window category / expansion checklist)
+-- ---------------------------------------------------------------------------
+--- Build the filter popup: a checklist of categories + expansions anchored to the
+--- right of the main window. Idempotent (no-op once built).
+function UI.BuildFilterPanel()
+  if UI.filterPanel then return end
+  local FW = 190
+  local p = CreateFrame("Frame", "EasyMountFarmerFilter", UI.frame, "BackdropTemplate")
+  UI.filterPanel = p
+  p:SetFrameStrata("DIALOG")
+  p:SetWidth(FW)
+  p:SetPoint("TOPLEFT", UI.frame, "TOPRIGHT", 6, 0)
+  p:SetBackdrop(BD1)
+  p:SetBackdropColor(C_BG[1], C_BG[2], C_BG[3], 0.98)
+  p:SetBackdropBorderColor(C_BORDER[1], C_BORDER[2], C_BORDER[3], 1)
+  p:EnableMouse(true)
+  p:Hide()
+
+  UI.filterRows = {}
+  local y = -10
+
+  local title = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  title:SetPoint("TOPLEFT", 10, y)
+  title:SetText(WHITE .. L["Filters"] .. "|r")
+  y = y - 24
+
+  --- Add a dim section header at the running offset.
+  ---@param text string  the header label
+  local function sectionHeader(text)
+    local h = p:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    h:SetPoint("TOPLEFT", 10, y)
+    h:SetText(text)
+    h:SetTextColor(0.55, 0.55, 0.62)
+    y = y - 18
+  end
+
+  --- Add a check row bound to a getter/setter; rebuilds the route on toggle.
+  ---@param label string  the row label
+  ---@param get function  returns the current boolean value
+  ---@param set function  receives the new boolean value
+  local function addRow(label, get, set)
+    local row = makeCheckRow(p, label, FW - 16)
+    row:SetPoint("TOPLEFT", 8, y)
+    paintCheck(row, get())
+    row:SetScript("OnClick", function()
+      local v = not get()
+      set(v)
+      paintCheck(row, v)
+      if ns.Progress and ns.Progress.Rebuild then ns.Progress.Rebuild(true) end
+    end)
+    UI.filterRows[#UI.filterRows + 1] = { row = row, get = get }
+    y = y - 20
+  end
+
+  sectionHeader(L["Show these categories"])
+  local CATS = {
+    { "dungeon", L["Dungeons"] }, { "raid", L["Raids"] }, { "worldboss", L["World bosses"] },
+    { "trash", L["Trash drops"] },
+    { "rare", L["Rare enemies"] }, { "event", L["Seasonal events"] },
+    { "vendor", L["Vendors"] }, { "treasure", L["Treasures"] }, { "achievement", L["Achievements"] },
+  }
+  for _, c in ipairs(CATS) do
+    local cat = c[1]
+    addRow(c[2],
+      function() return ns.db.filter and ns.db.filter.categories[cat] == true end,
+      function(v) ns.db.filter.categories[cat] = v end)
+  end
+
+  y = y - 8
+  sectionHeader(L["Show these expansions"])
+  for _, e in ipairs(ns.EXPANSION_ORDER or {}) do
+    local exp = e
+    addRow(L[exp],
+      function() return not ns.db.filter or ns.db.filter.expansions[exp] ~= false end,
+      function(v) ns.db.filter.expansions[exp] = v end)
+  end
+
+  p:SetHeight(-y + 10)
+end
+
+--- Repaint every filter check row from the current saved state.
+function UI.RefreshFilterRows()
+  for _, r in ipairs(UI.filterRows or {}) do paintCheck(r.row, r.get()) end
+end
+
+--- Toggle the filter popup open/closed (building it on first use).
+function UI.ToggleFilter()
+  UI.BuildFilterPanel()
+  if UI.filterPanel:IsShown() then
+    UI.filterPanel:Hide()
+  else
+    UI.RefreshFilterRows()
+    UI.filterPanel:Show()
+  end
+end
+
+-- ---------------------------------------------------------------------------
 -- build the window
 -- ---------------------------------------------------------------------------
 --- Build the main window and all its child widgets (idempotent: no-op if already built).
@@ -288,7 +452,11 @@ function UI.Init()
   f:SetMovable(true)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", f.StartMoving)
+  --- Begin dragging the window, unless it is locked.
+  ---@param self Frame  the window frame
+  f:SetScript("OnDragStart", function(self)
+    if not (ns.db and ns.db.locked) then self:StartMoving() end
+  end)
   --- Stop dragging the window and persist its new position.
   ---@param self Frame  the window frame
   f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); UI.SavePosition() end)
@@ -346,24 +514,13 @@ function UI.Init()
   f.step = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   f.step:SetJustifyH("LEFT")
   f.count = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  f.count:SetJustifyH("RIGHT")
+  f.count:SetJustifyH("CENTER")
 
-  -- ROUTE box (bullet list of travel steps)
-  f.routeBox = makePanel(f)
-  f.routeBox:SetBackdropColor(C_PANEL_BG[1], C_PANEL_BG[2], C_PANEL_BG[3], 0.9)
-  f.routeBox:SetBackdropBorderColor(C_PANEL_BRD[1], C_PANEL_BRD[2], C_PANEL_BRD[3], 1)
-  f.routeLabel = f.routeBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  f.routeLabel:SetPoint("TOPLEFT", 8, -7)
-  f.routeLabel:SetText(L["Manual route (optional)"])
-  f.routeLabel:SetTextColor(0.55, 0.55, 0.62)
-  f.routeText = f.routeBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  f.routeText:SetPoint("TOPLEFT", 8, -22)
-  f.routeText:SetWidth(INNER - 16)
-  f.routeText:SetJustifyH("LEFT")
-  f.routeText:SetJustifyV("TOP")
-  f.routeText:SetWordWrap(true)
-  f.routeText:SetSpacing(3)
-  f.routeText:SetTextColor(0.82, 0.82, 0.88)
+  -- "Filters" button, right-aligned on the count line (positioned in Refresh)
+  f.filter = makeButton(f, "nav")
+  f.filter:SetSize(58, 20)
+  f.filter.label:SetText(L["Filters"])
+  f.filter:SetScript("OnClick", function() UI.ToggleFilter() end)
 
   -- target headline: small dim action line + big amber name line (both centered)
   f.targetAction = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -441,10 +598,10 @@ function UI.Init()
       if not self.data then return end
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
       local b = self.data
-      if b.spellId and GameTooltip.SetMountBySpellID then
-        GameTooltip:SetMountBySpellID(b.spellId)
-      elseif b.itemId and GameTooltip.SetItemByID then
-        GameTooltip:SetItemByID(b.itemId)
+      if b.spellID and GameTooltip.SetMountBySpellID then
+        GameTooltip:SetMountBySpellID(b.spellID)
+      elseif b.itemID and GameTooltip.SetItemByID then
+        GameTooltip:SetItemByID(b.itemID)
       else
         GameTooltip:SetText(mountName(b))
       end
@@ -536,9 +693,10 @@ function UI.Refresh()
 
   local y = -56
 
-  -- step / count
+  -- step (left) / count (centered) / Filters button (right-aligned), same line
   f.step:ClearAllPoints(); f.step:SetPoint("TOPLEFT", PAD, y)
-  f.count:ClearAllPoints(); f.count:SetPoint("TOPRIGHT", -PAD, y - 2)
+  f.count:ClearAllPoints(); f.count:SetPoint("TOP", f, "TOP", 0, y - 2)
+  f.filter:ClearAllPoints(); f.filter:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PAD, y)
   y = y - 30
 
   local n = #ns.Progress.Active()
@@ -546,31 +704,33 @@ function UI.Refresh()
   local idx = ns.Progress.Index()
   local cur = ns.Progress.Current()
 
-  -- empty states
+  -- empty states: keep the centered count + Filters line at the top (so the filter
+  -- stays reachable even when everything is filtered out), and show the message below.
   if not cur then
-    if total == 0 then
-      f.step:SetText("|cff62d06e" .. L["Grats! All farmable mounts collected."] .. "|r")
-    else
-      f.step:SetText(WHITE .. L["Nothing to farm this reset — come back after reset."] .. "|r")
-    end
-    f.step:SetWidth(INNER)
-    f.step:SetWordWrap(true)
-    f.count:SetText("")
-    f.routeBox:Hide()
+    f.step:SetWidth(0); f.step:SetWordWrap(false); f.step:SetText("")
+    f.count:SetText(GREY .. string.format(L["%d mounts to find"], total) .. "|r")
     f.doneMark:Hide()
     f.actionPanel:Hide()
     f.targetAction:Hide()
-    f.target:SetText("")
     for _, row in ipairs(UI.rows) do row:Hide() end
     f.diff:Hide()
-    UI.SetBtn(f.prev, false); UI.SetBtn(f.next, false); UI.SetBtn(f.done, false)
     ns.Travel.Hide()
-    f.prev:ClearAllPoints(); f.prev:SetPoint("TOPLEFT", PAD, y - 4)
-    f.next:ClearAllPoints(); f.next:SetPoint("TOPRIGHT", -PAD, y - 4)
+
+    f.target:ClearAllPoints()
+    f.target:SetPoint("TOP", f, "TOP", 0, y)
+    f.target:SetWidth(INNER)
+    f.target:SetText((total == 0)
+      and ("|cff62d06e" .. L["Grats! All farmable mounts collected."] .. "|r")
+      or (WHITE .. L["Nothing to farm this reset — come back after reset."] .. "|r"))
+    local my = y - math.max(22, f.target:GetStringHeight()) - 16
+
+    UI.SetBtn(f.prev, false); UI.SetBtn(f.next, false); UI.SetBtn(f.done, false)
+    f.prev:ClearAllPoints(); f.prev:SetPoint("TOPLEFT", PAD, my)
+    f.next:ClearAllPoints(); f.next:SetPoint("TOPRIGHT", -PAD, my)
     f.done:ClearAllPoints()
     f.done:SetPoint("LEFT", f.prev, "RIGHT", 8, 0)
     f.done:SetPoint("RIGHT", f.next, "LEFT", -8, 0)
-    f:SetHeight(-(y - 4 - 28) + 12)
+    f:SetHeight(-(my - 28) + 12)
     return
   end
 
@@ -592,7 +752,6 @@ function UI.Refresh()
     f.step:SetText(WHITE .. string.format(L["Step %d / %d"], n, n) .. "|r")
     f.count:SetText(GREY .. string.format(L["%d mounts to find"], total) .. "|r")
 
-    f.routeBox:Hide()
     f.doneMark:Hide()
     f.actionPanel:Hide()
     f.targetAction:Hide()
@@ -686,22 +845,6 @@ function UI.Refresh()
     f.doneMark:Hide()
   end
 
-  -- ROUTE box: travel steps as a bullet list (hidden when the step is done)
-  local lines = {}
-  for _, e in ipairs(cur.breadcrumb or {}) do lines[#lines + 1] = "•  " .. ns.LocalizeHop(e.label) end
-  if #lines > 0 and not curDone then
-    f.routeText:SetText(table.concat(lines, "\n"))
-    local textH = math.max(12, f.routeText:GetStringHeight())
-    local boxH = 22 + textH + 8
-    f.routeBox:ClearAllPoints()
-    f.routeBox:SetPoint("TOPLEFT", PAD, y)
-    f.routeBox:SetSize(INNER, boxH)
-    f.routeBox:Show()
-    y = y - boxH - 14
-  else
-    f.routeBox:Hide()
-  end
-
   -- docked action panel: secure button + "Use X", when a travel action is suggested
   if ns.Travel.active then
     f.actionLabel:SetText(ns.Travel.label or "")
@@ -742,7 +885,7 @@ function UI.Refresh()
     row:SetAlpha(rowAlpha)
     row.data = boss
     row.noteText = boss.note or ""
-    row.icon:SetTexture("Interface\\Icons\\" .. (boss.icon or "INV_Misc_QuestionMark"))
+    row.icon:SetTexture(iconFor(boss))
     local rc = boss.epic and C_EPIC or C_RARE
     row.iconFrame:SetBackdropBorderColor(rc[1], rc[2], rc[3], 0.9)
     row.name:SetText(mountName(boss))
@@ -813,6 +956,11 @@ function UI.Show()
   if not UI.frame then UI.Init() end
   if ns.db then ns.db.shown = true end
   UI.frame:Show()
+  -- start the tour near the player each time the window is opened
+  if ns.Route and ns.Route.ComputeStart and ns.Progress and ns.Progress.Rebuild then
+    ns.Route.ComputeStart()
+    ns.Progress.Rebuild(true)
+  end
   UI.Refresh()
 end
 
@@ -820,6 +968,7 @@ end
 function UI.Hide()
   if ns.db then ns.db.shown = false end
   if UI.frame then UI.frame:Hide() end
+  if UI.filterPanel then UI.filterPanel:Hide() end
   if ns.Travel then ns.Travel.Hide() end
 end
 
@@ -880,6 +1029,10 @@ function UI.BuildSettings()
         if ns.Minimap.button then ns.Minimap.button:SetShown(v) end
       end
     end)
+
+  boolean("locked", L["Lock the window position"],
+    function() return ns.db.locked == true end,
+    function(v) ns.db.locked = v end)
 
   -- loot announce channel (dropdown)
   if Settings.CreateDropdown and Settings.CreateControlTextContainer then

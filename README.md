@@ -1,57 +1,100 @@
 # EasyMountFarmer
 
-Addon World of Warcraft (retail / Midnight, patch 12.x) qui porte **en jeu** un plan de route de farm de
-montures de donjons/raids/boss de zone.
+A World of Warcraft addon (retail / Midnight, patch 12.x) that turns mount farming into an
+**in-game, one-step-at-a-time route**: it shows the next dungeon, raid, world boss or rare to
+visit for a mount you're still missing, and gets out of your way once you've collected it.
 
-L'addon affiche **une étape à la fois** (le prochain donjon/raid à faire pour une monture qui te manque),
-avec :
+## Features
 
-- masquage automatique des montures déjà possédées (`C_MountJournal`) ;
-- avance automatique quand tu tues le boss (`ENCOUNTER_END`) ;
-- popup de félicitations quand la monture tombe (`NEW_MOUNT_ADDED`), avec annonce optionnelle dans le chat
-  (groupe / raid / guilde) incluant le lien de la monture ;
-- retour automatique à l'étape 1 aux resets (quotidien pour les donjons, hebdo pour les raids / mythique) ;
-- étape « attendre le reset » quand tout est fait, avec compte à rebours ;
-- détection des lockouts déjà pris ce reset (via `instanceId`, robuste quelle que soit la langue du client) ;
-- bouton pour passer à la bonne difficulté (héroïque / mythique / 10-25) ;
-- guidage par waypoint auto vers l'entrée (TomTom si présent, sinon flèche Blizzard) ;
-- page d'options dans le menu natif du jeu (catégorie AddOns).
+- **One target at a time** — the current stop, its still-needed mounts, and how to get there.
+- **Auto-hides collected mounts** via `C_MountJournal` (a mount you own never comes back).
+- **Auto-advances** when you kill the boss (`ENCOUNTER_END`, only on a difficulty where the
+  mount can drop; a Mythic Keystone counts for a Mythic requirement).
+- **Loot popup** when a mount drops (`NEW_MOUNT_ADDED`), with an optional chat announcement
+  (party / raid / guild) that includes the mount link.
+- **Reset-aware** — daily for dungeons, weekly for raids, Mythic dungeons and world bosses;
+  already-locked instances (`GetSavedInstanceInfo`) and done world-boss quests are skipped, and
+  the pointer snaps back to the first thing still to do. A **"wait for reset"** screen with
+  countdowns shows when everything is done for the reset.
+- **Difficulty button** — one click to switch to the required difficulty (Heroic / Mythic /
+  10-25 legacy) when it differs from yours.
+- **Waypoint guidance** to the entrance (TomTom if installed, otherwise the Blizzard waypoint),
+  with live turn-by-turn when **FarstriderLib** is present (portals / flight paths / teleports,
+  shown as a clickable action or an arrow). Everything still works without FarstriderLib.
+- **Filters** — a *Filters* button on the window opens a checklist to include/exclude whole
+  **categories** (Dungeons, Raids, World bosses, Trash, Rare enemies, Seasonal events, Vendors,
+  Treasures, Achievements) and individual **expansions**. Open-world drops are off by default.
+- **Curated route order** — a hand-tuned visiting sequence (grouped by expansion, kept
+  geographically sensible), with a few nice touches: Return to Karazhan sits next to Karazhan,
+  **Ny'alotha follows its weekly moving portal** (near Uldum or near Pandaria depending on the
+  week), and world rares in the same zone as a stop ride along right after it.
+- **Options** in the game's native Settings panel (auto-advance, TomTom, loot popup + channel,
+  auto-guide, minimap button, lock the window position).
 
-## Navigation avancée (optionnel)
+## Installation
 
-EasyMountFarmer pose un waypoint sur l'entrée de l'instance. Si **FarstriderLib** est installé, l'addon
-l'utilise en plus pour un vrai routage pas-à-pas (portails, vols, téléports) : il affiche l'action à faire
-(pierre de foyer / portail cliquable) ou la flèche vers le prochain point, recalculé en direct.
+Copy (or symlink) the `EasyMountFarmer/` folder into
+`World of Warcraft/_retail_/Interface/AddOns/`, then `/reload` in game.
 
-Sans FarstriderLib, tout fonctionne : tu as simplement le waypoint sur l'entrée au lieu du pas-à-pas.
+Open the window with `/emf` (or `/easymountfarmer`). Handy commands:
 
-## Installation (usage privé)
+| Command | Action |
+| --- | --- |
+| `/emf` | open / close the window |
+| `/emf next` · `/emf prev` | navigate steps |
+| `/emf guide` | set a waypoint to the current step |
+| `/emf reset` | re-sync to the first step still to do |
+| `/emf minimap` | toggle the minimap button |
+| `/emf arrow` | toggle the auto waypoint arrow |
+| `/emf help` | full command list |
 
-Copier (ou lier en symlink) le dossier `EasyMountFarmer/` dans
-`World of Warcraft/_retail_/Interface/AddOns/`, puis `/reload` en jeu.
+## Data & development
 
-En jeu : `/emf` (ou `/easymountfarmer`) ouvre la fenêtre. `/emf next`, `/emf prev`, `/emf guide`,
-`/emf reset`, `/emf help` pour la liste complète.
+The mount data is **generated in-game** from the Encounter Journal, then transformed into the
+Lua data files the addon ships with. There is no external website dependency.
 
-## Développement / mise à jour des données
+Pipeline (developer machine):
 
-La route provient de `data/planner.json`. Pour régénérer les données Lua :
+1. `/emf gen` in game walks the Encounter Journal for every dungeon / raid / world-boss mount
+   drop (expansion, encounter, difficulties, faction, entrance location) plus the world "drop"
+   orphans, and writes the `EasyMountFarmerGen` saved variable.
+2. Copy that saved-var table into `data/mounts-export.lua`.
+3. `node scripts/build-mounts.mjs` transforms it into:
+   - `EasyMountFarmer/Data/MountsInstances.lua` — dungeon / raid / world-boss mounts.
+   - `EasyMountFarmer/Data/MountsWorld.lua` — open-world drops (rare / event / vendor / treasure),
+     each tagged with its zone and, for vendors, the vendor name.
 
-```sh
-node scripts/build-data.mjs
-```
+Two files are **hand-authored** and never overwritten by the build:
 
-Cela réécrit `EasyMountFarmer/Data/RouteData.lua` et régénère `scripts/Locations.skeleton.lua`.
-`EasyMountFarmer/Data/Locations.lua` (coordonnées, lockouts, difficultés, encounterIDs saisis à la main)
-n'est **jamais** écrasé par le build.
+- `EasyMountFarmer/Data/Overrides.lua` — the irreducible bits the Encounter Journal can't
+  provide: lockout ids, world-boss weekly quest ids, moving-portal entrances, a few entrance
+  coordinates, and the curated visiting order (`EasyMountFarmerOrder`).
+- `EasyMountFarmer/Data/ExtraMounts.lua` — trash / timed-reward mounts with no boss encounter
+  (Ahn'Qiraj battle tanks, Amani Battle Bear).
 
-`node scripts/check-lua.mjs` valide la syntaxe de tous les `.lua` (via `luaparse`).
-`bash scripts/deploy.sh` copie le dossier addon dans ton dossier `Interface/AddOns`.
+Other scripts:
 
-## Traductions
+- `node scripts/check-lua.mjs` — validate every `.lua` file (via `luaparse`).
+- `bash scripts/deploy.sh` — copy the addon into your `Interface/AddOns` (dev).
+- `bash scripts/package.sh` — build the public CurseForge zip (`EasyMountFarmer-<version>.zip`)
+  with the data baked in and the in-game generator (`Tools/Generator.lua`, `/emf gen`) stripped
+  out. **The generator is developer-only and is not distributed.**
 
-Tous les textes affichés passent par une table de locale (`ns.L`, mise en place dans `Core/Locale.lua`).
-L'anglais (`Locales/enUS.lua`) est la référence ; le français (`Locales/frFR.lua`) est fourni. Pour ajouter
-une langue : copier `Locales/enUS.lua`, ajouter `if GetLocale() ~= "xxXX" then return end` en tête, traduire
-les valeurs, et référencer le fichier dans `EasyMountFarmer.toc`. Les clés manquantes retombent
-automatiquement sur le texte anglais (la clé).
+## Localization
+
+Every user-facing string goes through a locale table (`ns.L`, set up in `Core/Locale.lua`).
+English (`Locales/enUS.lua`) is the reference; French (`Locales/frFR.lua`) is provided. To add a
+language: copy `Locales/enUS.lua`, guard it with `if GetLocale() ~= "xxXX" then return end`,
+translate the values, and add the file to `EasyMountFarmer.toc`. Missing keys fall back to the
+English text automatically.
+
+## Known limitations
+
+- **Open-world mounts (rares / treasures / vendors) have no coordinates yet** — they can be
+  filtered and are listed with their zone, but there is no waypoint/arrow to them. Achievement
+  mounts aren't collected yet either. These are planned improvements.
+
+## Credits
+
+Route concept inspired by [SimpleArmory](https://simplearmory.com)'s mount planner; all in-game
+data is generated locally from the Encounter Journal.

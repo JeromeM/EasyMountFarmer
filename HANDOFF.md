@@ -13,10 +13,14 @@ Display name, folder, slash (`/emf`, `/easymountfarmer`), and all globals/saved 
 - Derived from `/apps/perso/SimpleArmory` (`static/data/planner.json`).
 
 ## Build / deploy / validate (from repo root)
-- **Generate data**: `node scripts/build-data.mjs` → `EasyMountFarmer/Data/RouteData.lua` (global `EasyMountFarmerRouteData`)
-  + `scripts/Locations.skeleton.lua`. Never overwrites `EasyMountFarmer/Data/Locations.lua` (hand-authored).
+- **Build data**: `node scripts/build-mounts.mjs` transforms `data/mounts-export.lua`
+  (the `/emf gen` snapshot) → `Data/MountsInstances.lua` + `Data/MountsWorld.lua`.
+  Hand data (`Data/ExtraMounts.lua`, `Data/Overrides.lua`) is never overwritten.
 - **Validate**: `node scripts/check-lua.mjs` (luaparse, recursive). The `_encode/_decode` shell lines are harmless zsh noise.
-- **Deploy**: `bash scripts/deploy.sh` → copies `EasyMountFarmer/` to `/mnt/d/Games/World of Warcraft/_retail_/Interface/AddOns/EasyMountFarmer`.
+- **Deploy (dev)**: `bash scripts/deploy.sh` → copies `EasyMountFarmer/` to `/mnt/d/Games/World of Warcraft/_retail_/Interface/AddOns/EasyMountFarmer`.
+- **Package (public)**: `bash scripts/package.sh` → `EasyMountFarmer-<version>.zip` at the repo
+  root (CurseForge layout), data baked in, `Tools/Generator.lua` + `/emf gen` + the
+  `EasyMountFarmerGen` saved var stripped. (`build/` and the zip are gitignored.)
 - Can't run WoW here → user tests. Code-only change = `/reload`; new file or `.toc` change = full client restart.
 
 ## Folder structure (load order matters, set in EasyMountFarmer.toc)
@@ -130,27 +134,120 @@ Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Waypoint, Navig
 ## Reference addons on disk (study only, ARR-licensed)
 `FarstriderLib`/`FarstriderLibData` (router we call), `TomTom` (optional arrow), `Overachiever2` (Settings API pattern), `Syndicator`.
 
-## Mount-data pipeline (in progress — replacing SimpleArmory planner.json)
-Goal: our own data, generated in-game, with an OPTIMIZED visiting order (hierarchical
-**expansion → zone → intra-zone proximity**, + runtime rotation to start near the player).
+## Mount-data pipeline (INTEGRATED — replaced SimpleArmory planner.json)
+Our own data, generated in-game, with an optimized visiting order (expansion → zone →
+proximity). **RouteData.lua + Locations.lua are GONE** (git-removed); the addon now runs
+entirely off the generated data + a slim hand-authored override layer.
 
 - **`Tools/Generator.lua`** (`/emf gen`, DEV-ONLY) walks the Encounter Journal → every
   dungeon/raid/world-boss mount drop, tagged with expansion, encounterID, difficulties,
-  faction, AND now **location** (zone/continent/entrance x,y via a brute-force
-  `GetDungeonEntrancesForMap` harvest). Also lists **orphans** = "Drop" mounts not on a
-  boss (AQ trash, world rares) via source-label match. Writes saved var `EasyMountFarmerGen`.
-  Async loot + item-cache handled (poll). Iterates all difficulties (Heroic/Mythic-only drops).
+  faction, location (zone/continent/entrance x,y). Also lists orphans (world rares / trash)
+  via source-label match. Writes saved var `EasyMountFarmerGen`. Async loot + item-cache
+  polling; iterates all difficulties.
 - Flow: `/emf gen` → `/reload` → snapshot `WTF/.../EasyMountFarmer.lua`'s Gen table into
-  repo **`data/mounts-export.lua`** → **`scripts/build-mounts.mjs`** (luaparse) splits into:
-  - **`Data/MountsInstances.lua`** (`EasyMountFarmerInstances`) — 65: dungeon/raid/worldboss, each with `category`.
-  - **`Data/MountsWorld.lua`** (`EasyMountFarmerWorld`) — world rares (orphans minus ExtraMounts ids).
-  - **`Data/ExtraMounts.lua`** (`EasyMountFarmerExtra`, HAND) — AQ tanks 110/117/118/119(/120 legacy) + Amani bear 400 (trash, no encounterID).
-- Last gen: 65 instances (wb6/raid40/dun19), 191 orphans. 1 unresolved mountID (Quantum Courser) — refetch next gen.
+  repo `data/mounts-export.lua` → `scripts/build-mounts.mjs` (luaparse) emits:
+  - **`Data/MountsInstances.lua`** (`EasyMountFarmerInstances`, GENERATED) — 65 mounts,
+    each: category, expansion, continent/zone, x/y, instance, journalInstanceID, boss,
+    encounterID, mountID, spellID, itemID, mount, faction, difficulties, order.
+  - **`Data/MountsWorld.lua`** (`EasyMountFarmerWorld`, GENERATED) — world rares (filter-gated off by default).
+  - **`Data/ExtraMounts.lua`** (`EasyMountFarmerExtra`, HAND) — AQ tanks + Amani bear
+    (trash, no encounterID), now carrying instanceId + entrance coords.
+  - **`Data/Overrides.lua`** (HAND) — the IRREDUCIBLE runtime overrides the EJ can't
+    generate: `EasyMountFarmerInstanceInfo[journalInstanceID]` = { instanceId, lowPriority,
+    entranceJID/entranceMaps, map/x/y (only where the generator captured none), encByMount
+    (encounterID the generator missed, e.g. Sethekk/Anzu 185→1904) };
+    `EasyMountFarmerWorldBossInfo[mountID]` = { questId, map/x/y }.
 
-### TODO (this feature)
-1. **Re-run `/emf gen`** (location capture just added) → re-snapshot → re-run build-mounts.
-2. **Ordering** in build-mounts.mjs: sort instances by expansion → zone → nearest-neighbour(x,y); emit an `order` index.
-3. **Runtime rotation**: on open, start the sequence at the player's nearest continent/zone.
-4. **Integration**: rewrite Route.lua/Progress to consume EasyMountFarmerInstances+Extra (drop RouteData/planner.json).
-5. **Category filter** in options (dungeon/raid/worldboss/trash/worldrare).
-6. **Packaging**: `/emf gen` + `Tools/Generator.lua` DEV-ONLY; `scripts/package.sh` → CurseForge ZIP with data baked, generator excluded.
+### Integration model (Route.lua)
+- `Route.BuildTargets()` groups the generated data into FULLY-ENRICHED targets and every
+  other module reads fields off the target (no more Locations lookups):
+  dungeon/raid → 1 target per journalInstanceID (`key="i:"..jid`); world boss/rare →
+  1 per mountID (`key="m:"..mountID`); trash → 1 per instance (`key="x:"..instance`).
+- **Difficulty is DERIVED** from `difficulties`: a single non-Normal diff → forced switch;
+  multiple → none. Per-instance = the single distinct reqDiff among still-needed mounts
+  (adapts as mounts get collected; e.g. Obsidian Sanctum 10/25 → no switch).
+- **Reset type** from category+reqDiff: mythic dungeon (23) → WeeklyDungeon; raid/trash/WB → weekly; else daily.
+- Legacy (unobtainable) mounts and collected/wrong-faction mounts are pruned. lowPriority (Stratholme) sorts last.
+- Validated by simulation: **53 farmable targets** (17 dun / 28 raid / 6 WB / 2 trash), 69 mounts.
+
+### Known data gaps (report to user; not integration bugs)
+- **Quantum Courser** (Dawn of the Infinites) has no mountID yet → its target is silently dropped. Refetch on next `/emf gen`.
+- **Stonevault Mechsuit** and **Culling of Stratholme Bronze Drake** are MISSING from the
+  generated data (Stonevault: a gen cache miss — should reappear on re-gen; Bronze Drake:
+  timed-mob drop the EJ never lists → needs a hand ExtraMounts entry once we have its mountID).
+- 11 instances have no `instanceId` yet (mythic dungeons + recent raids) → lockout auto-skip
+  relies on the localized-name fallback / kill-detection for those. Fill via `/emf debug` while saved.
+
+### Manual order (DONE — the user hand-specified the exact tour)
+- `EasyMountFarmerOrder` in Overrides.lua = an ordered list of target keys ("i:"..jid /
+  "m:"..mountID / "x:"..instance). When present it OVERRIDES the geographic auto-order
+  (`Route.orderManual`); unlisted targets fall to the end. No player-rotation (fixed order).
+- Conditional entries `{ key, entrance = <uiMapID> }` claim their slot only when the run's
+  live entrance is on that map — used so **Ny'alotha appears near Uldum on Uldum weeks
+  (slot 16) and near Pandaria on Vale weeks (slot 24)**, resolved via `liveEntranceMap`.
+- **BUG FIXED**: `target.map` was nil for all generated instances (the generated field is
+  `zone`, not `map`) — broke nav/waypoints. Now `map = info.map or first.map or first.zone`.
+- Cross-checked vs SimpleArmory: Ascendant Skyrazor = "Rasoir-céleste ascendant" (in Nerub-ar),
+  Wick = "Mèche" (in Darkflame Cleft) — both already included. Bronze Drake = "Drake bronze"
+  (mountID 248) is a world rare (Culling of Stratholme). Smoldering Ember Wyrm (Nightbane, RtK)
+  is NOT in the generated data (summoned event boss) — TODO: a "special events" zone with
+  instructions (user idea, later).
+
+### World-drop sub-categories (DONE — source-text classified)
+- build-mounts `classifyWorld` splits world drops into **rare (153) / treasure (21) /
+  vendor (5) / event (6)** from the source text; `parseVendor` stores the vendor NAME.
+  `achievement` category exists but is EMPTY — achievement-reward mounts aren't "Butin :"
+  drops so the generator never collected them (needs a generator change + re-gen to add,
+  ideally with the achievement ID so the card can open the Achievements window).
+- Route: `WORLD_CATEGORIES`/`IS_WORLD` — these share reset ("WorldRare") + zone-slot
+  ordering. Each defaults OFF in the filter. UI filter lists all 5; card headline shows
+  "Rare enemy/Treasure/Vendor/Seasonal event · <vendor> · <region>".
+- **NO COORDINATES**: the source text has none, so world rares still can't be navigated to
+  (no TomTom arrow). Getting coords needs an external source (Wowhead / a coords addon like
+  HandyNotes/RareScanner) or a region→uiMapID table for zone-level waypoints. PENDING a decision.
+
+### World rares slotted by zone (DONE)
+- build-mounts parses the "Région/Zone/Lieu : X" out of each rare's source into `zoneName`.
+- `orderManual` slots a world rare right AFTER the listed stop in the SAME zone (rank + 0.5).
+  24/185 rares match a stop's zone (e.g. Terremine ×8 → Liberation of Undermine, K'aresh ×3 →
+  Tazavesh, Jungle de Tanaan ×3 → Hellfire Citadel). The other 161 (region with no stop, or
+  no region at all — festivals/vendors/treasures) stay grouped at the end when world rares are on.
+- Possible follow-up (Tier 2): a region→expansion table to group the remaining rares near their
+  expansion's stops (data has only a region NAME, no coords, so true proximity is limited).
+
+### Ordering + rotation (auto fallback — runtime, Route.lua; used only when no manual order)
+- `Route.OrderTargets` orders expansion (portal hubs) → continent → intra-continent
+  nearest-neighbour on REAL world coords (`C_Map.GetWorldPosFromMapPos`), so adjacent
+  zones cluster and **world bosses are placed in their zone** (they now have coords via
+  `EasyMountFarmerWorldBossInfo`). Targets with no resolvable world pos (world rares) fall
+  to the end of their expansion. Degrades to generated `order` if the map API is unavailable.
+- **Rotation**: `Route.ComputeStart()` picks the expansion holding the target nearest the
+  player and caches it in `ns.rotateExpansion`; OrderTargets rotates the expansion-block
+  sequence to lead with it (stable across rebuilds; recomputed on login + window open).
+  Can't be simulated offline (needs live world coords) — verify in-game.
+- User chose "auto then I adjust": the auto baseline is geographic; fine-tune later with
+  small per-expansion/zone overrides if a sequence is off (e.g. their ideal Pandaria order).
+
+### Remaining TODO (deferred, user's call)
+1. **World-rare coordinates / navigation** — rares have no coords (source text has none), so
+   no waypoint/arrow for them. User chose "later"; options captured above (coords addon import /
+   zone-level waypoint / Wowhead scrape).
+2. **Achievement mounts** — extend `Tools/Generator.lua` to also collect achievement-reward
+   mounts (with their achievement ID → clickable card), then re-gen. The "achievement" filter
+   category already exists (empty for now).
+3. **Nightbane / special-event mounts** (Smoldering Ember Wyrm) — a "special events" zone with
+   ritual instructions (user idea).
+4. **Quantum Courser** (Dawn of the Infinites) + **Stonevault Mechsuit** — refetch via `/emf gen`.
+
+### Done this pass
+- Full data-model swap (above). Removed the "manual route" breadcrumb box from the UI.
+- Added a window **lock** button (padlock in the header; `ns.db.locked` gates dragging).
+- **Category + expansion filter** — a "Filter" button in the header opens an in-window
+  checklist popup (`UI.BuildFilterPanel`/`ToggleFilter`, flat check rows) with Dungeons/Raids/
+  World bosses/Trash/World rares + one row per expansion; each flips `ns.db.filter` and rebuilds.
+  (NOT in the game Settings panel — the user wanted it in the main UI.)
+- Window **lock** button restyled: the game's clean LFG padlock icon (desaturated when unlocked).
+- **Geographic ordering + player rotation** (above).
+- **Fixed the Ahn'Qiraj / Amani mountIDs** in ExtraMounts — they were ALL shifted by one
+  (110 was Swift Razzashi Raptor!). Correct: Qiraji tanks blue 117 / red 118 / yellow 119 /
+  green 120 / black 122 (legacy), Amani Battle Bear 419. `EXTRA_MOUNT_IDS` in build-mounts fixed to match.

@@ -40,13 +40,13 @@ function Progress.SecondsUntilWeekly()
 end
 
 --- Report whether a run is completed this reset via its tracking quest flag
---- (world bosses, and anything with a questId in Locations). Checked live so it
---- clears itself automatically at reset.
----@param key string  target key (index into EasyMountFarmerLocations)
+--- (world bosses carry a weekly questId). Checked live so it clears itself
+--- automatically at reset.
+---@param key string  target key (index into ns.targetsByKey)
 ---@return boolean  true if the tracking quest is flagged completed
 function Progress.IsDoneByQuest(key)
-  local l = (EasyMountFarmerLocations or {})[key]
-  local q = l and l.questId
+  local t = ns.targetsByKey and ns.targetsByKey[key]
+  local q = t and t.questId
   if not q then return false end
   if C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
     return C_QuestLog.IsQuestFlaggedCompleted(q)
@@ -135,20 +135,16 @@ function Progress.Rebuild(resetPointer)
   if resetPointer then ns.autoFollow = true end
   local prevKey = Progress.Current() and Progress.Current().key or nil
 
+  -- BuildTargets already orders everything (expansion -> route order, low-priority
+  -- and world rares last), so the active list is the built list as-is.
   ns.allTargets = ns.Route.BuildTargets()
+  ns.activeTargets = ns.allTargets
 
-  -- Keep ALL targets (done ones included, so the total is stable). "lowPriority"
-  -- runs have no reset lock (farmable any time, e.g. Stratholme Baron): push them
-  -- to the very end so time-gated content comes first.
-  local loc = EasyMountFarmerLocations or {}
-  local normal, low = {}, {}
-  for _, t in ipairs(ns.allTargets) do
-    local l = loc[t.key]
-    if l and l.lowPriority then low[#low + 1] = t else normal[#normal + 1] = t end
-  end
-  for _, t in ipairs(low) do normal[#normal + 1] = t end
-  ns.activeTargets = normal
-  local n = #normal
+  -- index by key so the other modules can resolve a target from a doneRuns key
+  ns.targetsByKey = {}
+  for _, t in ipairs(ns.allTargets) do ns.targetsByKey[t.key] = t end
+  local n = #ns.activeTargets
+  local normal = ns.activeTargets
 
   local idx
   if Progress.AutoFollowing() then
@@ -223,15 +219,15 @@ function Progress.AdvanceToNextUndone()
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end
 
---- Return the reset cadence type for a run: mythic dungeons lock WEEKLY (like
---- raids), not daily.
----@param key string  target key (index into EasyMountFarmerLocations)
----@param ptype string?  fallback reset type when no special rule applies
----@return string  reset type ("WeeklyDungeon", the given ptype, or "Raid")
+--- Return the reset cadence type for a run. The type is computed once in
+--- Route.BuildTargets (mythic dungeons already resolve to "WeeklyDungeon"), so this
+--- just resolves the target from its key, with the passed type as a fallback.
+---@param key string  target key (index into ns.targetsByKey)
+---@param ptype string?  fallback reset type when the target can't be resolved
+---@return string  reset type ("Dungeon", "WeeklyDungeon", "Raid", "WorldBoss", ...)
 function Progress.ResetTypeFor(key, ptype)
-  local l = (EasyMountFarmerLocations or {})[key]
-  if l and l.diffScope == "dungeon" and l.reqDiff == 23 then return "WeeklyDungeon" end
-  return ptype or "Raid"
+  local t = ns.targetsByKey and ns.targetsByKey[key]
+  return (t and t.type) or ptype or "Raid"
 end
 
 --- Mark a run done for this reset, then rebuild and (when appropriate) advance
@@ -288,7 +284,8 @@ function Progress.CheckResets()
   end
   if not db.seenWeekly or db.seenWeekly < lastWeekly then
     for k, v in pairs(db.doneRuns) do
-      if (v.type == "Raid" or v.type == "WeeklyDungeon") and v.at < lastWeekly then
+      -- anything that isn't a daily "Dungeon" is on the weekly cadence
+      if v.type ~= "Dungeon" and v.at < lastWeekly then
         db.doneRuns[k] = nil
       end
     end

@@ -19,6 +19,23 @@ local function initSavedVars()
   if ns.db.useTomTom == nil then ns.db.useTomTom = true end
   if ns.db.lootPopup == nil then ns.db.lootPopup = true end
   if ns.db.lootChannel == nil then ns.db.lootChannel = "NONE" end
+  if ns.db.locked == nil then ns.db.locked = false end
+
+  -- category / expansion filter: instances/raids/world bosses/trash on by default,
+  -- the open-world sub-categories off. Fill in any missing keys without wiping the
+  -- user's choices (so new categories get a sane default on upgrade).
+  ns.db.filter = ns.db.filter or {}
+  ns.db.filter.categories = ns.db.filter.categories or {}
+  ns.db.filter.expansions = ns.db.filter.expansions or {}
+  local isWorld = {}
+  for _, c in ipairs(ns.WORLD_CATEGORIES or {}) do isWorld[c] = true end
+  for _, c in ipairs(ns.ALL_CATEGORIES or {}) do
+    if ns.db.filter.categories[c] == nil then ns.db.filter.categories[c] = not isWorld[c] end
+  end
+  for _, e in ipairs(ns.EXPANSION_ORDER or {}) do
+    if ns.db.filter.expansions[e] == nil then ns.db.filter.expansions[e] = true end
+  end
+
   ns.charDB.doneRuns = ns.charDB.doneRuns or {}
   ns.charDB.currentIdx = ns.charDB.currentIdx or 1
 end
@@ -45,6 +62,8 @@ local function onLogin()
   ns.UI.BuildSettings()
   ns.Minimap.Init()
   ns.Progress.CheckResets()   -- builds targets, prunes stale, refreshes UI
+  ns.Route.ComputeStart()     -- start the tour at the expansion nearest the player
+  ns.Progress.Rebuild(true)   -- re-order with the player rotation applied
   ns.Progress.ResetPointer()  -- each session starts on the first step still to do
   if ns.db.shown then ns.UI.Show() end   -- restore the window's open/closed state
 end
@@ -128,13 +147,13 @@ SlashCmdList.EASYMOUNTFARMER = function(msg)
     end
     local cur = ns.Progress.Current()
     if cur then
-      local l = (EasyMountFarmerLocations or {})[cur.key]
-      ns.Print("current step: " .. tostring(cur.key))
-      print("  expected lockout string = |cffffff00" .. tostring(l and l.lockout) .. "|r (must match a name above to auto-skip)")
+      ns.Print("current step: " .. tostring(cur.key) .. "  (" .. tostring(cur.instance) .. ")")
+      print(string.format("  expected instanceId = |cffffff00%s|r  name = |cffffff00%s|r (must match a line above to auto-skip)",
+        tostring(cur.instanceId), tostring(cur.instance)))
     end
 
   elseif msg == "mapid" then
-    -- report the current zone's UiMapID + localized name (to fill RouteHops)
+    -- report the current zone's UiMapID + localized name (handy for entrance coords)
     local id = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
     local info = id and C_Map.GetMapInfo(id)
     ns.Print(string.format("UiMapID = |cffffff00%s|r  (%s)", tostring(id), info and info.name or "?"))
@@ -215,7 +234,9 @@ SlashCmdList.EASYMOUNTFARMER = function(msg)
     if not any then print("  (none detected in bags/equipped — this is likely why the ring is skipped)") end
 
   elseif msg == "gen" then
-    ns.Gen.Generate()
+    -- DEV-ONLY: Tools/Generator.lua ships only in the author's build (stripped by
+    -- scripts/package.sh), so guard the call — it's a silent no-op for end users.
+    if ns.Gen and ns.Gen.Generate then ns.Gen.Generate() end
 
   elseif msg == "help" then
     ns.Print(L["Commands:"])
