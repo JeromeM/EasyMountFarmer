@@ -2,7 +2,7 @@
 ## Title: EasyMountFarmer
 ## Notes: In-game mount farming route planner
 ## Author: JeromeM
-## Version: 0.2.4
+## Version: 0.2.5
 ## SavedVariables: EasyMountFarmerDB, EasyMountFarmerGen
 ## SavedVariablesPerCharacter: EasyMountFarmerCharDB
 ## OptionalDeps: FarstriderLib

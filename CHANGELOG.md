@@ -3,6 +3,15 @@
 All notable changes to EasyMountFarmer are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [0.2.5] - 2026-07-11
+
+### Changed
+- **Options reorganised into sub-pages**: the main **EasyMountFarmer**
+  entry is now an *about* page (short description, version, author, and a copyable
+  "report a problem" link), with **Arrow**, **Window** and **Loot** as separate sub-pages
+  in the settings tree instead of one long list.
+- **Option checkboxes are left-aligned**, so long labels are no longer truncated.
+
 ## [0.2.4] - 2026-07-11
 
 _This release also bundles everything from 0.2.3, which never reached CurseForge._

@@ -114,10 +114,13 @@ Navigation\Nav, UI\UI, UI\MinimapButton, Tools\Generator, Core\Core.
   **`UI.Refresh` no-ops in combat** (the docked secure button can't move mid-combat); Travel re-runs it on `PLAYER_REGEN_ENABLED`.
   **`UI.Hide` clears our waypoint** (`Waypoint.Clear`) + resets `lastGuidedKey`. **`UI.ArrowText(target)`** returns the amber
   target name for the arrow (reuses `targetParts`). Main window scales via `f:SetScale(ns.db.windowScale)`. **Settings = native
-  panel** (`UI.BuildSettings`/`OpenSettings`), grouped by **section headers** (`CreateSettingsListSectionHeaderInitializer`):
-  **Navigation** (autoGuide, arrowEnabled, arrowMetric, arrowScale+textScale sliders, arrowLocked), **Window** (windowScale slider,
-  autoAdvance, locked, showMinimap), **Loot** (lootPopup, lootChannel). `scaleSlider` helper = a % slider (0.5–2.5). Window pos +
-  shown state persist (`db.pos`, `db.shown`).
+  panel** (`UI.BuildSettings`/`OpenSettings`) as a **sub-page tree** (like LiteMount): the parent "EasyMountFarmer" is a **canvas
+  "about" page** (`UI.BuildAboutPanel` → name, divider, description, live version from `.toc`, author "Mordozor-Drek'thar", and a
+  copyable GitHub-issues URL box; it exposes no-op `OnCommit/OnDefault/OnRefresh`), registered via `RegisterCanvasLayoutCategory`.
+  Sub-pages via `RegisterVerticalLayoutSubcategory`: **Arrow** (autoGuide, arrowEnabled, arrowMetric, arrowScale+textScale sliders,
+  arrowLocked), **Window** (windowScale slider, autoAdvance, locked, showMinimap), **Loot** (lootPopup, lootChannel). `scaleSlider`
+  helper = a % slider (0.5–2.5); `boolean` helper **left-aligns the checkbox** (overrides the initializer's `InitFrame` to move
+  `Checkbox` left + stretch `Text`, so long labels aren't truncated). Window pos + shown state persist (`db.pos`, `db.shown`).
 - **UI/MinimapButton.lua** — self-contained. Left-click toggle window, **right-click opens the Settings** (was ResetAllDone;
   re-sync now only via `/emf reset`).
 - **Core/Core.lua** — saved-var init/defaults (autoGuide, shown, autoAdvance, **arrow {enabled,scale,textScale,locked,pos}**,
