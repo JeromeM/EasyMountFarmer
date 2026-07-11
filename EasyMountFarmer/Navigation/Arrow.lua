@@ -26,7 +26,8 @@ local sqrt = math.sqrt
 local ARROW_TEXTURE = "Interface\\AddOns\\EasyMountFarmer\\Media\\arrow.tga"
 local COLS, ROWS, FRAMES = 8, 8, 64          -- sprite grid (must match gen_sheet.py)
 Arrow.SPIN = 1                               -- flip to -1 if it turns the wrong way
-local FAR_YARDS = 1500   -- at/beyond this the arrow is fully red; green within ARRIVE_YARDS
+local FAR_YARDS = 1500     -- at/beyond this the colour is fully red
+local GREEN_YARDS = 30     -- at/within this the colour is fully green (well before it hides)
 
 --- Point the sprite-sheet arrow at a screen-relative angle (radians, CCW from up)
 --- by selecting the matching pre-rendered 3D frame.
@@ -38,7 +39,7 @@ local function setFrame(tex, angle)
   tex:SetTexCoord(col / COLS, (col + 1) / COLS, row / ROWS, (row + 1) / ROWS)
 end
 Arrow.ROTATION_OFFSET = 0        -- radians added to the computed rotation
-local ARRIVE_YARDS = 20          -- within this distance, show the "arrived" state
+local ARRIVE_YARDS = 6           -- within this distance you've "arrived" → hide the arrow (~5 m)
 local THROTTLE = 0.05            -- OnUpdate recompute interval (seconds)
 local BASE_SIZE = 54             -- arrow edge in px at scale 1 (there's a size slider)
 local TEXT_WIDTH = 220           -- wrap width for the text lines (before text scale)
@@ -87,9 +88,9 @@ end
 ---@return number r, number g, number b
 local function distColor(d)
   local t
-  if d <= ARRIVE_YARDS then t = 1
+  if d <= GREEN_YARDS then t = 1
   elseif d >= FAR_YARDS then t = 0
-  else t = 1 - math.log(d / ARRIVE_YARDS) / math.log(FAR_YARDS / ARRIVE_YARDS) end
+  else t = 1 - math.log(d / GREEN_YARDS) / math.log(FAR_YARDS / GREEN_YARDS) end
   return hsvToRgb(120 * t, 1.0, 1.0)   -- hue 0=red .. 120=green
 end
 
@@ -259,7 +260,7 @@ onUpdate = function(self, elapsed)
   if not pcont or not facing or pcont ~= destWorld.cont then
     -- cross-continent / inside an instance / on a taxi: no meaningful heading.
     self.arrow:Hide()
-    self.dist:SetText("")
+    if self.textFrame then self.textFrame:Hide() end
     Arrow.debug.bearing, Arrow.debug.rel, Arrow.debug.dist = nil, nil, nil
     return
   end
@@ -278,10 +279,18 @@ onUpdate = function(self, elapsed)
 
   Arrow.debug.bearing, Arrow.debug.rel, Arrow.debug.dist = bearing, rel, dist
 
+  if dist <= ARRIVE_YARDS then
+    -- Arrived at this waypoint: hide the arrow + its text. It reappears if you move
+    -- away or the route advances to the next hop; Waypoint.Clear() removes it for good.
+    self.arrow:Hide()
+    if self.textFrame then self.textFrame:Hide() end
+    return
+  end
+
   self.arrow:Show()
-  local angle = (dist <= ARRIVE_YARDS) and 0 or (Arrow.SPIN * rel + Arrow.ROTATION_OFFSET)
-  setFrame(self.arrow, angle)                              -- pick the matching 3D frame
-  local r, g, b = distColor(dist)                          -- red (far) → green (near)
+  if self.textFrame then self.textFrame:Show() end
+  setFrame(self.arrow, Arrow.SPIN * rel + Arrow.ROTATION_OFFSET)   -- matching 3D frame
+  local r, g, b = distColor(dist)                                  -- red (far) → green (near)
   self.arrow:SetVertexColor(r, g, b)
   self.dist:SetText(Arrow.FormatDistance(dist))
 end
