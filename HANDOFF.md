@@ -75,8 +75,9 @@ Navigation\Nav, UI\UI, UI\MinimapButton, Tools\Generator, Core\Core.
     `setFrame` picks the frame from `rel` via `SetTexCoord` (NOT SetRotation) → the 3D perspective holds in every direction
     (incl. pointing back at you). Frame 0 = points away/up. `Arrow.SPIN` (1/-1) + `Arrow.ROTATION_OFFSET` (radians) are the
     calibration knobs; `COLS/ROWS/FRAMES` must match **`scripts/gen-arrow.py`** (the reproducible generator; `python3 scripts/gen-arrow.py`).
-  - **Colour = distance** via `distColor` (HSV hue 120→0): green within `ARRIVE_YARDS` (20, also snaps to frame 0), then
-    yellow → orange → red toward `FAR_YARDS` (1500), log-scaled. `SetVertexColor` per tick.
+  - **Colour = distance** via `distColor` (HSV hue 120→0): green within `GREEN_YARDS` (30) → yellow → orange → red toward
+    `FAR_YARDS` (1500), log-scaled, `SetVertexColor` per tick. **Arrival**: within `ARRIVE_YARDS` (6, ~5m) the arrow + its text
+    HIDE (you're there); they reappear if you move away or the route advances to the next hop (`Waypoint.Clear` removes it for good).
   - **Text stack** under the arrow (own `textFrame`, scaled by `ns.db.arrow.textScale`): line 1 = the **farm target name**
     (amber, via `ns.UI.ArrowText(Current())`), line 2 = the router's **step instruction** (`title`, white; skipped if it equals
     the name), line 3 = distance (`FormatDistance`, honours `ns.db.arrow.metric`). Anchor hugs the arrow (`ApplyScale`, `size*0.16`).
