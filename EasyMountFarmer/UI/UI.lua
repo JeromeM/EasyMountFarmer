@@ -1056,57 +1056,151 @@ end
 -- ---------------------------------------------------------------------------
 -- options: registered in the game's Settings panel (AddOns category)
 -- ---------------------------------------------------------------------------
+--- Build the "about" landing frame shown on the parent Settings page: addon name,
+--- a divider, a short description, the version, the author, and a copyable
+--- "report a problem" link. Built once.
+---@return table  the canvas frame
+function UI.BuildAboutPanel()
+  if UI.aboutPanel then return UI.aboutPanel end
+  local f = CreateFrame("Frame", "EasyMountFarmerAboutPanel", UIParent)
+  UI.aboutPanel = f
+
+  local title = f:CreateFontString(nil, "ARTWORK", "GameFontNormalHuge")
+  title:SetPoint("TOPLEFT", 10, -16)
+  title:SetText(L["EasyMountFarmer"])
+
+  local div = f:CreateTexture(nil, "ARTWORK")
+  div:SetAtlas("Options_HorizontalDivider", true)
+  div:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
+
+  local desc = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+  desc:SetPoint("TOPLEFT", div, "BOTTOMLEFT", 2, -12)
+  desc:SetWidth(560)
+  desc:SetJustifyH("LEFT")
+  desc:SetSpacing(3)
+  desc:SetText(L["Guided, one-mount-at-a-time farming: EasyMountFarmer shows the next uncollected mount to go for and points you straight to it."])
+
+  local ver = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version"))
+           or (GetAddOnMetadata and GetAddOnMetadata(ADDON, "Version")) or "?"
+  local version = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  version:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -16)
+  version:SetText(L["Version"] .. ": |cffffffff" .. ver .. "|r")
+
+  local author = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  author:SetPoint("TOPLEFT", version, "BOTTOMLEFT", 0, -4)
+  author:SetText(L["Author"] .. ": |cffffffffMordozor-Drek'thar|r")
+
+  local reportLabel = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  reportLabel:SetPoint("TOPLEFT", author, "BOTTOMLEFT", 0, -16)
+  reportLabel:SetText(L["Report a problem"] .. ":")
+
+  -- Read-only, auto-selecting box so the URL can be copied (WoW can't open a browser).
+  local url = "https://github.com/JeromeM/EasyMountFarmer/issues"
+  local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+  eb:SetPoint("TOPLEFT", reportLabel, "BOTTOMLEFT", 6, -6)
+  eb:SetSize(400, 20)
+  eb:SetAutoFocus(false)
+  eb:SetFontObject(ChatFontNormal)
+  eb:SetText(url)
+  eb:SetCursorPosition(0)
+  eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  eb:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+  eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+  eb:SetScript("OnEditFocusLost", function(self) self:HighlightText(0, 0); self:SetCursorPosition(0) end)
+  eb:SetScript("OnMouseUp", function(self) self:HighlightText() end)
+  eb:SetScript("OnChar", function(self) self:SetText(url); self:HighlightText() end)   -- keep read-only
+
+  -- Canvas categories may receive these from the Settings panel (Okay/Defaults/Refresh).
+  f.OnCommit = function() end
+  f.OnDefault = function() end
+  f.OnRefresh = function() end
+
+  return f
+end
+
 --- Register the addon's options in the game's Settings panel (idempotent).
 function UI.BuildSettings()
   if UI.settingsCategory then return end
   if not (Settings and Settings.RegisterVerticalLayoutCategory and Settings.RegisterProxySetting) then return end
 
-  local category, layout = Settings.RegisterVerticalLayoutCategory(L["EasyMountFarmer"])
+  -- Parent page "EasyMountFarmer" is an "about" landing (canvas); Arrow, Window and
+  -- Loot are sub-pages in the left nav tree (like LiteMount).
+  local category
+  if Settings.RegisterCanvasLayoutCategory then
+    category = Settings.RegisterCanvasLayoutCategory(UI.BuildAboutPanel(), L["EasyMountFarmer"])
+  else
+    category = Settings.RegisterVerticalLayoutCategory(L["EasyMountFarmer"])
+  end
   UI.settingsCategory = category
-
-  --- Register a boolean proxy setting and add a checkbox for it to the category.
-  ---@param variable string  the setting's storage key suffix (prefixed with "EasyMountFarmer_")
-  ---@param name string  the localized label shown next to the checkbox
-  ---@param getter function  returns the current boolean value
-  ---@param setter function  receives the new boolean value
-  local function boolean(variable, name, getter, setter)
-    local setting = Settings.RegisterProxySetting(category, "EasyMountFarmer_" .. variable,
-      Settings.VarType.Boolean, name, true, getter, setter)
-    Settings.CreateCheckbox(category, setting)
-  end
-
-  --- Add a section header row (groups the options below it).
-  ---@param name string  the localized section title
-  local function header(name)
-    if layout and layout.AddInitializer and CreateSettingsListSectionHeaderInitializer then
-      layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(name))
-    end
-  end
 
   local pct = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end
 
-  --- Register a number proxy setting and add a percentage slider (0.5–2.5, step 0.1).
+  -- Move a Settings checkbox's box to the LEFT and let the label fill the rest of the
+  -- row. The default layout puts the box on the right, which truncates long labels.
+  local function leftAlignCheckbox(frame)
+    if not (frame and frame.Checkbox and frame.Text) then return end
+    local base = ((frame.GetIndent and frame:GetIndent()) or 0) + 37
+    frame.Checkbox:ClearAllPoints()
+    frame.Checkbox:SetPoint("LEFT", frame, "LEFT", base, 0)
+    frame.Text:ClearAllPoints()
+    frame.Text:SetPoint("LEFT", frame.Checkbox, "RIGHT", 8, 0)
+    frame.Text:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
+    frame.Text:SetJustifyH("LEFT")
+  end
+
+  --- Register a boolean proxy setting + a checkbox (box on the LEFT) on the category.
+  ---@param cat table  the (sub)category to add the control to
+  ---@param variable string  storage key suffix (prefixed with "EasyMountFarmer_")
+  ---@param name string  the localized checkbox label
+  ---@param getter function  returns the current boolean value
+  ---@param setter function  receives the new boolean value
+  local function boolean(cat, variable, name, getter, setter)
+    local setting = Settings.RegisterProxySetting(cat, "EasyMountFarmer_" .. variable,
+      Settings.VarType.Boolean, name, true, getter, setter)
+    local init = Settings.CreateCheckbox(cat, setting)
+    if init and init.InitFrame then          -- reposition once the row's frame is built
+      local orig = init.InitFrame
+      init.InitFrame = function(self, frame)
+        orig(self, frame)
+        pcall(leftAlignCheckbox, frame)
+      end
+    end
+  end
+
+  --- Register a number proxy setting + a percentage slider (0.5–2.5) on a category.
+  ---@param cat table  the (sub)category to add the slider to
   ---@param variable string  storage key suffix
   ---@param name string  localized label
   ---@param getter function  returns the current number
   ---@param setter function  receives the new number
-  local function scaleSlider(variable, name, getter, setter)
+  local function scaleSlider(cat, variable, name, getter, setter)
     if not (Settings.CreateSlider and Settings.CreateSliderOptions) then return end
-    local setting = Settings.RegisterProxySetting(category, "EasyMountFarmer_" .. variable,
+    local setting = Settings.RegisterProxySetting(cat, "EasyMountFarmer_" .. variable,
       Settings.VarType.Number, name, 1, getter, setter)
     local options = Settings.CreateSliderOptions(0.5, 2.5, 0.1)
     options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, pct)
-    Settings.CreateSlider(category, setting, options, nil)
+    Settings.CreateSlider(cat, setting, options, nil)
   end
 
-  -- ── Navigation & arrow ───────────────────────────────────────────────────
-  header(L["Navigation"])
+  --- Create a sub-page under the parent category (falls back to the parent if the
+  --- subcategory API is unavailable, so everything still shows on one page).
+  ---@param name string  the localized sub-page title
+  ---@return table  the sub-category (or the parent as a fallback)
+  local function subPage(name)
+    if Settings.RegisterVerticalLayoutSubcategory then
+      return (Settings.RegisterVerticalLayoutSubcategory(category, name))
+    end
+    return category
+  end
 
-  boolean("autoGuide", L["Auto-guide (waypoint / action)"],
+  -- ── Arrow (sub-page); the parent "EasyMountFarmer" page is intentionally empty ──
+  local arrowCat = subPage(L["Arrow"])
+
+  boolean(arrowCat, "autoGuide", L["Auto-guide (waypoint / action)"],
     function() return ns.db.autoGuide ~= false end,
     function(v) ns.db.autoGuide = v; UI.lastGuidedKey = nil; if ns.UI.Refresh then ns.UI.Refresh() end end)
 
-  boolean("arrowEnabled", L["Show the direction arrow"],
+  boolean(arrowCat, "arrowEnabled", L["Show the direction arrow"],
     function() return not (ns.db.arrow and ns.db.arrow.enabled == false) end,
     function(v)
       ns.db.arrow = ns.db.arrow or {}
@@ -1119,14 +1213,14 @@ function UI.BuildSettings()
       end
     end)
 
-  boolean("arrowMetric", L["Use metric distance (m / km)"],
+  boolean(arrowCat, "arrowMetric", L["Use metric distance (m / km)"],
     function() return ns.db.arrow and ns.db.arrow.metric == true end,
     function(v)
       ns.db.arrow = ns.db.arrow or {}
       ns.db.arrow.metric = v
     end)
 
-  scaleSlider("arrowScale", L["Arrow size"],
+  scaleSlider(arrowCat, "arrowScale", L["Arrow size"],
     function() return (ns.db.arrow and ns.db.arrow.scale) or 1 end,
     function(v)
       ns.db.arrow = ns.db.arrow or {}
@@ -1134,7 +1228,7 @@ function UI.BuildSettings()
       if ns.Arrow and ns.Arrow.ApplyScale then ns.Arrow.ApplyScale() end
     end)
 
-  scaleSlider("textScale", L["Text size"],
+  scaleSlider(arrowCat, "textScale", L["Text size"],
     function() return (ns.db.arrow and ns.db.arrow.textScale) or 1 end,
     function(v)
       ns.db.arrow = ns.db.arrow or {}
@@ -1142,7 +1236,7 @@ function UI.BuildSettings()
       if ns.Arrow and ns.Arrow.ApplyScale then ns.Arrow.ApplyScale() end
     end)
 
-  boolean("arrowLocked", L["Lock the arrow position"],
+  boolean(arrowCat, "arrowLocked", L["Lock the arrow position"],
     function() return ns.db.arrow and ns.db.arrow.locked == true end,
     function(v)
       ns.db.arrow = ns.db.arrow or {}
@@ -1150,25 +1244,25 @@ function UI.BuildSettings()
       if ns.Arrow and ns.Arrow.frame then ns.Arrow.frame:EnableMouse(not v) end
     end)
 
-  -- ── Window ───────────────────────────────────────────────────────────────
-  header(L["Window"])
+  -- ── Window (sub-page) ──────────────────────────────────────────────────────
+  local winCat = subPage(L["Window"])
 
-  scaleSlider("windowScale", L["Window size"],
+  scaleSlider(winCat, "windowScale", L["Window size"],
     function() return ns.db.windowScale or 1 end,
     function(v)
       ns.db.windowScale = v
       if UI.frame then UI.frame:SetScale(v) end
     end)
 
-  boolean("autoAdvance", L["Auto-advance to the next step"],
+  boolean(winCat, "autoAdvance", L["Auto-advance to the next step"],
     function() return ns.db.autoAdvance ~= false end,
     function(v) ns.db.autoAdvance = v; if ns.UI.Refresh then ns.UI.Refresh() end end)
 
-  boolean("locked", L["Lock the window position"],
+  boolean(winCat, "locked", L["Lock the window position"],
     function() return ns.db.locked == true end,
     function(v) ns.db.locked = v end)
 
-  boolean("showMinimap", L["Show the minimap button"],
+  boolean(winCat, "showMinimap", L["Show the minimap button"],
     function() return not (ns.db.minimap and ns.db.minimap.hide) end,
     function(v)
       ns.db.minimap = ns.db.minimap or {}
@@ -1179,16 +1273,16 @@ function UI.BuildSettings()
       end
     end)
 
-  -- ── Loot ─────────────────────────────────────────────────────────────────
-  header(L["Loot"])
+  -- ── Loot (sub-page) ──────────────────────────────────────────────────────────
+  local lootCat = subPage(L["Loot"])
 
-  boolean("lootPopup", L["Show the loot notification"],
+  boolean(lootCat, "lootPopup", L["Show the loot notification"],
     function() return ns.db.lootPopup ~= false end,
     function(v) ns.db.lootPopup = v end)
 
   -- loot announce channel (dropdown)
   if Settings.CreateDropdown and Settings.CreateControlTextContainer then
-    local chan = Settings.RegisterProxySetting(category, "EasyMountFarmer_lootChannel",
+    local chan = Settings.RegisterProxySetting(lootCat, "EasyMountFarmer_lootChannel",
       Settings.VarType.String, L["Announce loot in channel"], "NONE",
       function() return ns.db.lootChannel or "NONE" end,
       function(v) ns.db.lootChannel = v end)
@@ -1202,7 +1296,7 @@ function UI.BuildSettings()
       c:Add("GUILD", L["Guild"])
       return c:GetData()
     end
-    Settings.CreateDropdown(category, chan, options)
+    Settings.CreateDropdown(lootCat, chan, options)
   end
 
   Settings.RegisterAddOnCategory(category)
