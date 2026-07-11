@@ -251,3 +251,37 @@ entirely off the generated data + a slim hand-authored override layer.
 - **Fixed the Ahn'Qiraj / Amani mountIDs** in ExtraMounts — they were ALL shifted by one
   (110 was Swift Razzashi Raptor!). Correct: Qiraji tanks blue 117 / red 118 / yellow 119 /
   green 120 / black 122 (legacy), Amani Battle Bear 419. `EXTRA_MOUNT_IDS` in build-mounts fixed to match.
+
+### UI polish + combat safety (0.2.1 / 0.2.2)
+- Filter: the header **lock button was REMOVED** — locking is now an option
+  ("Lock the window position", `ns.db.locked`) in `UI.BuildSettings`. The **"Filters"**
+  button moved to the counter line (right-aligned); `UI.PositionFilterPanel` opens the
+  popup on whichever side of the window has room (so it isn't off-screen at the right edge).
+- Mount-row **tooltip** now adds the **expansion**, **where it drops** (`dropInfo`:
+  boss·instance, or vendor·region for world drops), and a **"Ctrl + click to preview"** hint;
+  **Ctrl+click** a row opens the 3D preview via `DressUpMount(mountID)` (`previewMount`).
+- **Combat safety**: `UI.Refresh` **returns immediately in `InCombatLockdown()`** (the
+  layout moves the docked secure Travel button, which can't change mid-combat — a partial
+  refresh broke the window). Travel.lua re-runs Refresh on `PLAYER_REGEN_ENABLED`, so it
+  reflows once combat ends. Navigation (Next/Prev) still updates the pointer.
+- **Closing the window** now calls `ns.Waypoint.Clear()` (removes OUR TomTom/Blizzard arrow)
+  and resets `UI.lastGuidedKey` so reopening re-places it.
+- **World-drop categories HIDDEN for now** (user request): `categoryEnabled` returns false
+  for `IS_WORLD[...]`, and the rare/event/vendor/treasure/achievement rows are removed from
+  the filter CATS. Data (MountsWorld.lua, classification, vendor names) is KEPT. To bring
+  them back: delete that one line in Route + restore the CATS rows in UI (both flagged with a comment).
+
+### Publishing / CI (release pipeline)
+- Current version **0.2.2**. GitHub Actions:
+  - `.github/workflows/validate.yml` — runs `node scripts/check-lua.mjs` on PRs / branches.
+  - `.github/workflows/release.yml` — on **master only**, publishes when the `## Version:` has no
+    matching `vX.Y.Z` tag yet: builds via **`scripts/package.sh`** (identical artifact), uploads to
+    **CurseForge** (`itsmeow/curseforge-upload`), and creates a **GitHub Release** + tag. **Wago was dropped.**
+  - Repo config: secret `CF_API_KEY`; variables `CF_PROJECT_ID`, optional `GAME_VERSIONS`
+    (default `12.0.1,12.0.5,12.0.7,12.1.0`); Actions "Read and write". See `.github/PUBLISHING.md`.
+- **To cut a release**: on a branch, bump `## Version:` in the .toc + add a `## [x.y.z]` section to
+  CHANGELOG.md (its body = the release notes) → PR → merge to master → auto-publish.
+- **Workflow rule (user)**: changes go on a **branch → PR → merge to master** (CI publishes only on master).
+- **Gotcha learned**: the tag/GitHub-Release step runs AFTER the uploads; if an upload step FAILS,
+  the tag is never created, so the next master push re-publishes the same version (→ CurseForge
+  duplicates). Keep upload steps reliable, or the version-skip can't gate re-runs.
