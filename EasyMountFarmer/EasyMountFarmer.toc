@@ -2,10 +2,10 @@
 ## Title: EasyMountFarmer
 ## Notes: In-game mount farming route planner
 ## Author: JeromeM
-## Version: 0.2.2
+## Version: 0.2.3
 ## SavedVariables: EasyMountFarmerDB, EasyMountFarmerGen
 ## SavedVariablesPerCharacter: EasyMountFarmerCharDB
-## OptionalDeps: TomTom, FarstriderLib
+## OptionalDeps: FarstriderLib
 
 Core\Locale.lua
 Locales\enUS.lua
@@ -19,6 +19,7 @@ Modules\Progress.lua
 Modules\Lockouts.lua
 Modules\Difficulty.lua
 Modules\Detect.lua
+Navigation\Arrow.lua
 Navigation\Waypoint.lua
 Navigation\Travel.lua
 Navigation\Nav.lua

@@ -192,6 +192,17 @@ local function targetParts(target)
   return nil, inst
 end
 
+--- The current farm target's name, colour-coded amber to match the main window
+--- headline — shown on the arrow's top line. Reuses targetParts for wording/casing.
+---@param target table  the current farm target
+---@return string? amberName  the amber-coded name, or nil if unavailable
+function UI.ArrowText(target)
+  if not target then return nil end
+  local _, name = targetParts(target)
+  if not name or name == "" then return nil end
+  return AMBER .. name .. "|r"
+end
+
 --- Resolve the localized required-difficulty label for a target via the game. The
 --- required difficulty is derived and stored on the target (target.reqDiff).
 ---@param target table  a farm target (has .reqDiff)
@@ -486,6 +497,7 @@ function UI.Init()
   local f = CreateFrame("Frame", "EasyMountFarmerFrame", UIParent, "BackdropTemplate")
   UI.frame = f
   f:SetSize(W, 360)
+  f:SetScale((ns.db and ns.db.windowScale) or 1)
   f:SetFrameStrata("MEDIUM")
   f:SetToplevel(true)
   f:SetBackdrop(BD1)
@@ -1031,7 +1043,7 @@ function UI.Hide()
   if UI.frame then UI.frame:Hide() end
   if UI.filterPanel then UI.filterPanel:Hide() end
   if ns.Travel then ns.Travel.Hide() end
-  if ns.Waypoint then ns.Waypoint.Clear() end   -- remove our TomTom / Blizzard arrow
+  if ns.Waypoint then ns.Waypoint.Clear() end   -- remove our native waypoint + direction arrow
   UI.lastGuidedKey = nil                          -- so reopening re-places the arrow
 end
 
@@ -1063,24 +1075,98 @@ function UI.BuildSettings()
     Settings.CreateCheckbox(category, setting)
   end
 
-  boolean("autoAdvance", L["Auto-advance to the next step"],
-    function() return ns.db.autoAdvance ~= false end,
-    function(v) ns.db.autoAdvance = v; if ns.UI.Refresh then ns.UI.Refresh() end end)
-
-  -- TomTom checkbox only when TomTom is installed
-  if TomTom and TomTom.AddWaypoint then
-    boolean("useTomTom", L["Use TomTom"],
-      function() return ns.db.useTomTom ~= false end,
-      function(v) ns.db.useTomTom = v; UI.lastGuidedKey = nil; if ns.UI.Refresh then ns.UI.Refresh() end end)
+  --- Add a section header row (groups the options below it).
+  ---@param name string  the localized section title
+  local function header(name)
+    if layout and layout.AddInitializer and CreateSettingsListSectionHeaderInitializer then
+      layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(name))
+    end
   end
 
-  boolean("lootPopup", L["Show the loot notification"],
-    function() return ns.db.lootPopup ~= false end,
-    function(v) ns.db.lootPopup = v end)
+  local pct = function(v) return string.format("%d%%", math.floor(v * 100 + 0.5)) end
+
+  --- Register a number proxy setting and add a percentage slider (0.5–2.5, step 0.1).
+  ---@param variable string  storage key suffix
+  ---@param name string  localized label
+  ---@param getter function  returns the current number
+  ---@param setter function  receives the new number
+  local function scaleSlider(variable, name, getter, setter)
+    if not (Settings.CreateSlider and Settings.CreateSliderOptions) then return end
+    local setting = Settings.RegisterProxySetting(category, "EasyMountFarmer_" .. variable,
+      Settings.VarType.Number, name, 1, getter, setter)
+    local options = Settings.CreateSliderOptions(0.5, 2.5, 0.1)
+    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, pct)
+    Settings.CreateSlider(category, setting, options, nil)
+  end
+
+  -- ── Navigation & arrow ───────────────────────────────────────────────────
+  header(L["Navigation"])
 
   boolean("autoGuide", L["Auto-guide (waypoint / action)"],
     function() return ns.db.autoGuide ~= false end,
     function(v) ns.db.autoGuide = v; UI.lastGuidedKey = nil; if ns.UI.Refresh then ns.UI.Refresh() end end)
+
+  boolean("arrowEnabled", L["Show the direction arrow"],
+    function() return not (ns.db.arrow and ns.db.arrow.enabled == false) end,
+    function(v)
+      ns.db.arrow = ns.db.arrow or {}
+      ns.db.arrow.enabled = v
+      if v then
+        UI.lastGuidedKey = nil
+        if ns.UI.Refresh then ns.UI.Refresh() end
+      elseif ns.Arrow then
+        ns.Arrow.Hide()
+      end
+    end)
+
+  boolean("arrowMetric", L["Use metric distance (m / km)"],
+    function() return ns.db.arrow and ns.db.arrow.metric == true end,
+    function(v)
+      ns.db.arrow = ns.db.arrow or {}
+      ns.db.arrow.metric = v
+    end)
+
+  scaleSlider("arrowScale", L["Arrow size"],
+    function() return (ns.db.arrow and ns.db.arrow.scale) or 1 end,
+    function(v)
+      ns.db.arrow = ns.db.arrow or {}
+      ns.db.arrow.scale = v
+      if ns.Arrow and ns.Arrow.ApplyScale then ns.Arrow.ApplyScale() end
+    end)
+
+  scaleSlider("textScale", L["Text size"],
+    function() return (ns.db.arrow and ns.db.arrow.textScale) or 1 end,
+    function(v)
+      ns.db.arrow = ns.db.arrow or {}
+      ns.db.arrow.textScale = v
+      if ns.Arrow and ns.Arrow.ApplyScale then ns.Arrow.ApplyScale() end
+    end)
+
+  boolean("arrowLocked", L["Lock the arrow position"],
+    function() return ns.db.arrow and ns.db.arrow.locked == true end,
+    function(v)
+      ns.db.arrow = ns.db.arrow or {}
+      ns.db.arrow.locked = v
+      if ns.Arrow and ns.Arrow.frame then ns.Arrow.frame:EnableMouse(not v) end
+    end)
+
+  -- ── Window ───────────────────────────────────────────────────────────────
+  header(L["Window"])
+
+  scaleSlider("windowScale", L["Window size"],
+    function() return ns.db.windowScale or 1 end,
+    function(v)
+      ns.db.windowScale = v
+      if UI.frame then UI.frame:SetScale(v) end
+    end)
+
+  boolean("autoAdvance", L["Auto-advance to the next step"],
+    function() return ns.db.autoAdvance ~= false end,
+    function(v) ns.db.autoAdvance = v; if ns.UI.Refresh then ns.UI.Refresh() end end)
+
+  boolean("locked", L["Lock the window position"],
+    function() return ns.db.locked == true end,
+    function(v) ns.db.locked = v end)
 
   boolean("showMinimap", L["Show the minimap button"],
     function() return not (ns.db.minimap and ns.db.minimap.hide) end,
@@ -1093,9 +1179,12 @@ function UI.BuildSettings()
       end
     end)
 
-  boolean("locked", L["Lock the window position"],
-    function() return ns.db.locked == true end,
-    function(v) ns.db.locked = v end)
+  -- ── Loot ─────────────────────────────────────────────────────────────────
+  header(L["Loot"])
+
+  boolean("lootPopup", L["Show the loot notification"],
+    function() return ns.db.lootPopup ~= false end,
+    function(v) ns.db.lootPopup = v end)
 
   -- loot announce channel (dropdown)
   if Settings.CreateDropdown and Settings.CreateControlTextContainer then

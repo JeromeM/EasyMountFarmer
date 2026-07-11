@@ -1,5 +1,5 @@
 -- MinimapButton.lua — self-contained minimap button (no external libs).
--- Left-click: toggle window. Right-click: reset per-reset completions.
+-- Left-click: toggle window. Right-click: open the settings panel.
 
 local ADDON, ns = ...
 ns.Minimap = ns.Minimap or {}
@@ -43,8 +43,7 @@ function Minimap.Init()
 
   btn:SetScript("OnClick", function(_, mouseButton)
     if mouseButton == "RightButton" then
-      ns.Progress.ResetAllDone()
-      ns.Print(L["Re-synced to the first step to do."])
+      ns.UI.OpenSettings()
     else
       ns.UI.Toggle()
     end
@@ -66,7 +65,7 @@ function Minimap.Init()
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     GameTooltip:AddLine(L["EasyMountFarmer"])
     GameTooltip:AddLine(L["Left-click: open/close"], 1, 1, 1)
-    GameTooltip:AddLine(L["Right-click: jump to the next step to do"], 1, 1, 1)
+    GameTooltip:AddLine(L["Right-click: open settings"], 1, 1, 1)
     GameTooltip:Show()
   end)
   btn:SetScript("OnLeave", GameTooltip_Hide)

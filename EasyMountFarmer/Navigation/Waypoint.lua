@@ -1,17 +1,12 @@
--- Waypoint.lua — guide to a point: TomTom if present, otherwise Blizzard's
--- native user waypoint. We track the waypoint we set so Clear() only removes
--- ours (never a waypoint the player placed by hand).
+-- Waypoint.lua — guide to a point using the game's native user waypoint (map +
+-- minimap pin + supertracked distance) together with our own on-screen direction
+-- arrow (ns.Arrow). No external addon dependency. We track what WE set so Clear()
+-- only removes ours (never a waypoint the player placed by hand).
 
 local ADDON, ns = ...
 ns.Waypoint = ns.Waypoint or {}
 local Waypoint = ns.Waypoint
 local L = ns.L
-
---- Whether to use TomTom for waypoints: present AND not disabled by the user.
----@return boolean  true when TomTom is available and enabled in settings
-local function useTomTom()
-  return TomTom and TomTom.AddWaypoint and (not ns.db or ns.db.useTomTom ~= false)
-end
 
 --- Resolve a run's entrance from the game's Encounter Journal when it defines
 --- entranceJID + candidate entranceMaps. Some raids' portals move (e.g. Ny'alotha,
@@ -55,12 +50,9 @@ function ns.EntranceFor(key)
   if t.map and t.x and t.y then return t.map, t.x, t.y end
 end
 
---- Remove the waypoint WE set (if any), leaving player-placed waypoints intact.
+--- Remove what WE set (native user waypoint + our arrow), leaving player-placed
+--- waypoints intact.
 function Waypoint.Clear()
-  if TomTom and Waypoint._uid then
-    if TomTom.RemoveWaypoint then pcall(TomTom.RemoveWaypoint, TomTom, Waypoint._uid) end
-    Waypoint._uid = nil
-  end
   if Waypoint._blizzard and C_Map and C_Map.ClearUserWaypoint then
     C_Map.ClearUserWaypoint()
     if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
@@ -68,37 +60,38 @@ function Waypoint.Clear()
     end
     Waypoint._blizzard = nil
   end
+  if ns.Arrow then ns.Arrow.Hide() end
 end
 
---- Set a waypoint/arrow to an explicit UI map point: TomTom if enabled, else
---- the Blizzard user waypoint. Clears our previously-set waypoint first.
+--- Point at an explicit UI map point: set the native user waypoint (map + minimap
+--- pin + supertracked distance) best-effort, and always show our own on-screen
+--- arrow. Clears our previous one first.
 ---@param mapID number  uiMapID of the target map
 ---@param x number  normalized X coordinate (0-1)
 ---@param y number  normalized Y coordinate (0-1)
----@param title string?  label shown on the waypoint
+---@param title string?  label shown on the waypoint / arrow
 function Waypoint.SetTo(mapID, x, y, title)
   if not mapID or not x or not y then return end
   Waypoint.Clear()   -- drop our previous one first
 
-  if useTomTom() then
-    Waypoint._uid = TomTom:AddWaypoint(mapID, x, y, {
-      title = title, from = "EasyMountFarmer", persistent = false, minimap = true, world = true,
-    })
-    return
-  end
-
+  -- Native user waypoint for the map + minimap pin. Best-effort: some maps
+  -- disallow it (CanSetUserWaypointOnMap == false) — the arrow still guides there.
   if C_Map and C_Map.SetUserWaypoint and UiMapPoint and UiMapPoint.CreateFromCoordinates then
-    if C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(mapID) then return end
-    C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, x, y))
-    Waypoint._blizzard = true
-    if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
-      C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+    if not (C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(mapID)) then
+      C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, x, y))
+      Waypoint._blizzard = true
+      if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
+        C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+      end
     end
   end
+
+  -- Our own on-screen direction arrow.
+  if ns.Arrow then ns.Arrow.Show(mapID, x, y, title) end
 end
 
---- Guide to the target's entrance (0-100 coords): resolve the coords then place a
---- waypoint, printing a message on failure unless silent.
+--- Guide to the target's entrance (0-100 coords): resolve the coords then point
+--- at them, printing a message on failure unless silent.
 ---@param target table  run entry with key and title fields
 ---@param silent boolean?  suppress user-facing error messages when true
 function Waypoint.GuideTo(target, silent)
@@ -108,12 +101,6 @@ function Waypoint.GuideTo(target, silent)
     if not silent then
       ns.Print(string.format(L["No coordinates for \"%s\"."], target.title or "?"))
     end
-    return
-  end
-
-  if not useTomTom()
-     and C_Map and C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(map) then
-    if not silent then ns.Print(L["Cannot place a waypoint on that map from here."]) end
     return
   end
 

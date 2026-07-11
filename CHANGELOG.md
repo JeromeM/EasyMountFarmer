@@ -3,6 +3,27 @@
 All notable changes to EasyMountFarmer are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [0.2.3] - 2026-07-11
+
+### Added
+- **Built-in navigation arrow** — a self-contained on-screen 3D direction arrow, so
+  TomTom is no longer needed. It's a pre-rendered sprite sheet, so the 3D perspective
+  holds in every direction (including when it points back toward you), and its colour
+  shifts with distance: **red** when far → orange → yellow → **green** when you're close.
+- **Right-click the arrow** for a quick menu: arrow size, text size, and lock.
+- **New options**: arrow-size, text-size and main-window-size sliders; a metric-distance
+  toggle (yards ⇄ m/km); and "Lock the arrow position" (locked = click-through).
+
+### Changed
+- **Dropped the TomTom dependency.** The map/minimap pin now uses the native Blizzard
+  waypoint and the on-screen arrow is our own. TomTom is no longer referenced anywhere
+  (it can stay installed — it's simply ignored).
+- The arrow's text shows the **target name** (amber) above the current **routing step**,
+  then the distance.
+- **Minimap button**: right-click now opens the **settings** (progress re-sync moved to
+  the `/emf reset` command).
+- **Settings** are grouped into **Navigation / Window / Loot** sections.
+
 ## [0.2.2] - 2026-07-10
 
 ### Changed
