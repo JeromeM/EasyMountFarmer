@@ -5,12 +5,12 @@ name: Release
 # doc-only merge with the same version does nothing.
 #
 # The zip is built by scripts/package.sh — the exact same artifact you get locally
-# (generator stripped, data baked in) — then uploaded to CurseForge and Wago, and
-# attached to a GitHub Release tagged vX.Y.Z.
+# (generator stripped, data baked in) — then uploaded to CurseForge and attached to
+# a GitHub Release tagged vX.Y.Z.
 #
 # Required repo config (Settings -> Secrets and variables -> Actions):
-#   Secrets:   CF_API_KEY, WAGO_API_TOKEN
-#   Variables: CF_PROJECT_ID, WAGO_PROJECT_ID
+#   Secrets:   CF_API_KEY
+#   Variables: CF_PROJECT_ID
 # and Settings -> Actions -> Workflow permissions: "Read and write".
 on:
   push:
@@ -25,7 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CF_API_KEY: ${{ secrets.CF_API_KEY }}
-      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,12 +88,6 @@ jobs:
           display_name: EasyMountFarmer ${{ steps.meta.outputs.version }}
           changelog: ${{ steps.notes.outputs.body }}
           changelog_type: markdown
-
-      - name: Upload to Wago
-        if: steps.meta.outputs.exists == 'false' && env.WAGO_API_TOKEN != ''
-        run: bash scripts/upload-wago.sh "${{ env.ZIP }}" "${{ steps.meta.outputs.version }}" "${{ steps.meta.outputs.versions }}"
-        env:
-          WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
 
       - name: GitHub Release (tag vX.Y.Z)
         if: steps.meta.outputs.exists == 'false'
