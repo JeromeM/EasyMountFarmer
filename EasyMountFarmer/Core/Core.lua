@@ -16,7 +16,11 @@ local function initSavedVars()
   if ns.db.autoGuide == nil then ns.db.autoGuide = true end
   if ns.db.shown == nil then ns.db.shown = false end
   if ns.db.autoAdvance == nil then ns.db.autoAdvance = true end
-  if ns.db.useTomTom == nil then ns.db.useTomTom = true end
+  ns.db.arrow = ns.db.arrow or {}
+  if ns.db.arrow.enabled == nil then ns.db.arrow.enabled = true end
+  if ns.db.arrow.scale == nil then ns.db.arrow.scale = 1 end
+  if ns.db.arrow.textScale == nil then ns.db.arrow.textScale = 1 end
+  if ns.db.windowScale == nil then ns.db.windowScale = 1 end
   if ns.db.lootPopup == nil then ns.db.lootPopup = true end
   if ns.db.lootChannel == nil then ns.db.lootChannel = "NONE" end
   if ns.db.locked == nil then ns.db.locked = false end
@@ -166,6 +170,16 @@ SlashCmdList.EASYMOUNTFARMER = function(msg)
     ns.Print(string.format("cur=%s | done=%s | Travel.active=%s | hint=%s",
       tostring(cur and cur.key), tostring(cur and ns.Progress.IsDone(cur.key)),
       tostring(ns.Travel and ns.Travel.active), tostring(ns.leaveInstanceHint)))
+    -- arrow calibration: if the arrow points the wrong way, bearing/facing/rel here
+    -- tell us the constant to add to Arrow.ROTATION_OFFSET (all radians, CCW from north).
+    local d = ns.Arrow and ns.Arrow.debug
+    if d then
+      ns.Print(string.format("arrow: bearing=%s facing=%s rel=%s dist=%s",
+        d.bearing and string.format("%.2f", d.bearing) or "nil",
+        d.facing and string.format("%.2f", d.facing) or "nil",
+        d.rel and string.format("%.2f", d.rel) or "nil",
+        d.dist and string.format("%.0f", d.dist) or "nil"))
+    end
 
   elseif msg == "enc" then
     ns.db.encDebug = not ns.db.encDebug

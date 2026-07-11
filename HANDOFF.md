@@ -7,10 +7,12 @@ Display name, folder, slash (`/emf`, `/easymountfarmer`), and all globals/saved 
 
 ## What & where
 - WoW **retail, Midnight (patch 12.x)** addon. Slash **`/emf`** / `/easymountfarmer`.
-- Ports SimpleArmory's mount-farming planner in-game: shows **one uncollected mount target at a time**,
+- Mount-farming planner in-game: shows **one uncollected mount target at a time**,
   guided, auto-skips what's already done (collected / locked this reset / world-boss quest done).
 - Repo: **`/apps/perso/EasyMountFarmer`** (git). Addon folder: `EasyMountFarmer/` (copied into `Interface/AddOns`).
-- Derived from `/apps/perso/SimpleArmory` (`static/data/planner.json`).
+- **No longer tied to SimpleArmory** — SimpleArmory was only the original inspiration for the concept.
+  The addon now runs entirely off **our own mount list**, generated in-game via `/emf gen` (see the pipeline
+  section). SimpleArmory's `planner.json` is no longer used or referenced at runtime or build time.
 
 ## Build / deploy / validate (from repo root)
 - **Build data**: `node scripts/build-mounts.mjs` transforms `data/mounts-export.lua`
@@ -25,9 +27,10 @@ Display name, folder, slash (`/emf`, `/easymountfarmer`), and all globals/saved 
 
 ## Folder structure (load order matters, set in EasyMountFarmer.toc)
 `Core/` (Locale, Core) · `Locales/` (enUS, frFR) · `Data/` (MountsInstances, MountsWorld — GENERATED; ExtraMounts, Overrides — HAND) ·
-`Modules/` (Route, Progress, Lockouts, Difficulty, Detect) · `Navigation/` (Waypoint, Travel, Nav) · `UI/` (UI, MinimapButton) · `Tools/` (Generator — DEV-ONLY, stripped from the public zip).
+`Modules/` (Route, Progress, Lockouts, Difficulty, Detect) · `Navigation/` (Arrow, Waypoint, Travel, Nav) · `UI/` (UI, MinimapButton) ·
+`Media/` (arrow.tga — the generated 3D arrow sprite sheet; NOT in .toc, loaded by path) · `Tools/` (Generator — DEV-ONLY, stripped from the public zip).
 .toc order: Core\Locale, Locales\enUS, Locales\frFR, Data\MountsInstances, Data\MountsWorld, Data\ExtraMounts, Data\Overrides,
-Modules\Route, Modules\Progress, Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Waypoint, Navigation\Travel,
+Modules\Route, Modules\Progress, Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Arrow, Navigation\Waypoint, Navigation\Travel,
 Navigation\Nav, UI\UI, UI\MinimapButton, Tools\Generator, Core\Core.
 
 ## Files & roles
@@ -62,10 +65,33 @@ Navigation\Nav, UI\UI, UI\MinimapButton, Tools\Generator, Core\Core.
 - **Modules/Detect.lua** — ENCOUNTER_END (success + encounterID match + difficulty ok, **keystone 8 satisfies mythic 23**)
   → MarkDone("kill"). NEW_MOUNT_ADDED → loot popup (if `db.lootPopup`) + **chat announce with mount spell link** (if `db.lootChannel`~="NONE")
   + Rebuild. `/emf enc` debug prints encounterID on any kill.
-- **Navigation/Waypoint.lua** — `SetTo(map,x01,y01,title)` / `GuideTo(target,silent)` / `Clear()`. TomTom if present AND
-  `db.useTomTom`, else Blizzard user waypoint. Tracks its own waypoint so Clear only removes ours. Also owns
-  **`ns.EntranceFor(key)`** — the shared entrance resolver (0-100): live from the Encounter Journal when the run defines
-  `entranceJID`+`entranceMaps` (moving portals — see learnings), else the target's own coords (resolved via `ns.targetsByKey`). Nav AND Waypoint both use it.
+- **Navigation/Arrow.lua** — **our own on-screen 3D direction arrow** (replaced TomTom's crazy arrow; NO external dep).
+  `ns.Arrow.Show(map,x01,y01,title)` / `Hide()` / `ApplyScale()` / `OpenMenu(owner)`. Movable Button (`ns.db.arrow.pos`),
+  OnUpdate ~10Hz: player + target world pos via native `C_Map.GetWorldPosFromMapPos` (both via the same path so continentIDs
+  compare), heading vs `GetPlayerFacing()`. **Bearing math replicates HereBeDragons' GetWorldVector**: `atan2(-deltaComp2,
+  deltaComp1)` — WoW's world axes are TRANSPOSED vs GetXY order (same reason UnitPosition returns y,x) — normalized CCW-from-north
+  to match GetPlayerFacing. `rel = SPIN*(bearing-facing) + ROTATION_OFFSET`.
+  - **Texture is a SPRITE SHEET** `Media/arrow.tga` (1024×1024, 8×8 = 64 pre-rendered 3D frames, grayscale so we tint it).
+    `setFrame` picks the frame from `rel` via `SetTexCoord` (NOT SetRotation) → the 3D perspective holds in every direction
+    (incl. pointing back at you). Frame 0 = points away/up. `Arrow.SPIN` (1/-1) + `Arrow.ROTATION_OFFSET` (radians) are the
+    calibration knobs; `COLS/ROWS/FRAMES` must match **`scripts/gen-arrow.py`** (the reproducible generator; `python3 scripts/gen-arrow.py`).
+  - **Colour = distance** via `distColor` (HSV hue 120→0): green within `ARRIVE_YARDS` (20, also snaps to frame 0), then
+    yellow → orange → red toward `FAR_YARDS` (1500), log-scaled. `SetVertexColor` per tick.
+  - **Text stack** under the arrow (own `textFrame`, scaled by `ns.db.arrow.textScale`): line 1 = the **farm target name**
+    (amber, via `ns.UI.ArrowText(Current())`), line 2 = the router's **step instruction** (`title`, white; skipped if it equals
+    the name), line 3 = distance (`FormatDistance`, honours `ns.db.arrow.metric`). Anchor hugs the arrow (`ApplyScale`, `size*0.16`).
+  - **`ApplyScale`** sizes the frame (`BASE_SIZE` 54 × `ns.db.arrow.scale`) + text (`textScale`); called on login and from the
+    sliders/menu. **Strata**: `HIGH` normally, drops to `LOW` while `SettingsPanel`/`GameMenuFrame` is shown (stays visible,
+    just under the panel — so size is tweakable live). **Lock** (`ns.db.arrow.locked`): no drag + `EnableMouse(false)`
+    (click-through) → unlock only via Settings. **Right-click** → `OpenMenu` (MenuUtil): arrow-size / text-size preset radios + lock.
+  - Hides the arrow art (frame stays, so it recovers) when cross-continent / in an instance / on a taxi. `Arrow.debug`
+    (bearing/facing/rel/dist) is dumped by `/emf nav`.
+- **Navigation/Waypoint.lua** — `SetTo(map,x01,y01,title)` / `GuideTo(target,silent)` / `Clear()`. Sets the **native
+  Blizzard user waypoint** (map + minimap pin + supertrack) best-effort (skipped where `CanSetUserWaypointOnMap` is false —
+  the arrow still guides there) AND drives **`ns.Arrow`** for the on-screen arrow. **TomTom is GONE** — no longer referenced
+  anywhere. Tracks its own waypoint so Clear only removes ours. Also owns **`ns.EntranceFor(key)`** — the shared entrance
+  resolver (0-100): live from the Encounter Journal when the run defines `entranceJID`+`entranceMaps` (moving portals — see
+  learnings), else the target's own coords (resolved via `ns.targetsByKey`). Nav AND Waypoint both use it.
 - **Navigation/Travel.lua** — the **docked secure action button**. Parented to **UIParent** (so the window has no protected
   child and can move/resize freely) but **anchored to the action panel** (a Frame) so it sits inside the window.
   `Ensure(panel)`, `ShowAction(kind,id,labelOverride)` (sets `Travel.active`+`Travel.label`; defers attrs/show in combat),
@@ -85,11 +111,16 @@ Navigation\Nav, UI\UI, UI\MinimapButton, Tools\Generator, Core\Core.
   letter). Done step → dim rows + green marker. Leave-instance panel (hearthstone 6948) when `inInstance and ns.leaveInstanceHint`.
   **"Wait for reset" step** when auto-following AND `not AnyUndone()` (countdowns via `pendingResets()`/`f.waitInfo`).
   **`UI.Refresh` no-ops in combat** (the docked secure button can't move mid-combat); Travel re-runs it on `PLAYER_REGEN_ENABLED`.
-  **`UI.Hide` clears our waypoint** (`Waypoint.Clear`) + resets `lastGuidedKey`. **Settings = native panel** (`UI.BuildSettings`/
-  `OpenSettings`): autoAdvance, useTomTom (if loaded), lootPopup, lootChannel, autoGuide, showMinimap, **locked** (lock window
-  position — replaces the old header lock button). Window pos + shown state persist (`db.pos`, `db.shown`).
-- **UI/MinimapButton.lua** — self-contained. Left-click toggle, right-click ResetAllDone.
-- **Core/Core.lua** — saved-var init/defaults (autoGuide, shown, autoAdvance, useTomTom, lootPopup, lootChannel, minimap,
+  **`UI.Hide` clears our waypoint** (`Waypoint.Clear`) + resets `lastGuidedKey`. **`UI.ArrowText(target)`** returns the amber
+  target name for the arrow (reuses `targetParts`). Main window scales via `f:SetScale(ns.db.windowScale)`. **Settings = native
+  panel** (`UI.BuildSettings`/`OpenSettings`), grouped by **section headers** (`CreateSettingsListSectionHeaderInitializer`):
+  **Navigation** (autoGuide, arrowEnabled, arrowMetric, arrowScale+textScale sliders, arrowLocked), **Window** (windowScale slider,
+  autoAdvance, locked, showMinimap), **Loot** (lootPopup, lootChannel). `scaleSlider` helper = a % slider (0.5–2.5). Window pos +
+  shown state persist (`db.pos`, `db.shown`).
+- **UI/MinimapButton.lua** — self-contained. Left-click toggle window, **right-click opens the Settings** (was ResetAllDone;
+  re-sync now only via `/emf reset`).
+- **Core/Core.lua** — saved-var init/defaults (autoGuide, shown, autoAdvance, **arrow {enabled,scale,textScale,locked,pos}**,
+  **windowScale**, lootPopup, lootChannel, minimap,
   **locked**, **filter** = categories+expansions with world sub-categories off); onLogin (Init, BuildSettings, Minimap.Init,
   CheckResets, **Route.ComputeStart**, Rebuild, ResetPointer, restore shown); events; 30s ticker; slash `/emf`
   (toggle|next|prev|guide|reset|minimap|arrow|debug|nav|enc|entrance|route|mapid|**gen** [dev-only, guarded]|help).
@@ -144,7 +175,9 @@ Navigation\Nav, UI\UI, UI\MinimapButton, Tools\Generator, Core\Core.
   `C_EncounterJournal.GetDungeonEntrancesForMap`. The source of truth for a run's coords; used to fill `entranceJID`/`Locations`.
 
 ## Reference addons on disk (study only, ARR-licensed)
-`FarstriderLib`/`FarstriderLibData` (router we call), `TomTom` (optional arrow), `Overachiever2` (Settings API pattern), `Syndicator`.
+`FarstriderLib`/`FarstriderLibData` (router we call), `Overachiever2` (Settings API pattern), `Syndicator`.
+`TomTom` is still on disk (study only) but **no longer used** — its crazy-arrow was replaced by our own `Navigation/Arrow.lua`
+(the arrow bearing math is lifted from TomTom's embedded `libs/HereBeDragons/HereBeDragons-2.0.lua` → `GetWorldVector`).
 
 ## Mount-data pipeline (INTEGRATED — replaced SimpleArmory planner.json)
 Our own data, generated in-game, with an optimized visiting order (expansion → zone →
