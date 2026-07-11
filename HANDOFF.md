@@ -24,22 +24,32 @@ Display name, folder, slash (`/emf`, `/easymountfarmer`), and all globals/saved 
 - Can't run WoW here → user tests. Code-only change = `/reload`; new file or `.toc` change = full client restart.
 
 ## Folder structure (load order matters, set in EasyMountFarmer.toc)
-`Core/` (Locale.lua, Core.lua) · `Locales/` (enUS.lua, frFR.lua) · `Data/` (RouteData.lua, Locations.lua) ·
-`Modules/` (Route, Progress, Lockouts, Difficulty, Detect) · `Navigation/` (Waypoint, Travel, Nav) · `UI/` (UI, MinimapButton).
-.toc order: Core\Locale, Locales\enUS, Locales\frFR, Data\RouteData, Data\Locations, Modules\Route, Modules\Progress,
-Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Waypoint, Navigation\Travel, Navigation\Nav, UI\UI, UI\MinimapButton, Core\Core.
+`Core/` (Locale, Core) · `Locales/` (enUS, frFR) · `Data/` (MountsInstances, MountsWorld — GENERATED; ExtraMounts, Overrides — HAND) ·
+`Modules/` (Route, Progress, Lockouts, Difficulty, Detect) · `Navigation/` (Waypoint, Travel, Nav) · `UI/` (UI, MinimapButton) · `Tools/` (Generator — DEV-ONLY, stripped from the public zip).
+.toc order: Core\Locale, Locales\enUS, Locales\frFR, Data\MountsInstances, Data\MountsWorld, Data\ExtraMounts, Data\Overrides,
+Modules\Route, Modules\Progress, Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Waypoint, Navigation\Travel,
+Navigation\Nav, UI\UI, UI\MinimapButton, Tools\Generator, Core\Core.
 
 ## Files & roles
 - **Core/Locale.lua** — `ns.L` (metatable → returns the key if untranslated), `ns.Print`.
-- **Locales/enUS.lua** — every English key. **Locales/frFR.lua** — French values (guarded `if GetLocale()~="frFR"`),
-  incl. a **route-steps section** (breadcrumb labels) and **instance-name overrides** (e.g. `L["Dawn of the Infinites"]="Aube de l'Infini"`).
-- **Data/RouteData.lua** — GENERATED. **Data/Locations.lua** — hand-authored per run (key = English run title):
-  `map,x,y` (entrance 0–100), `instanceId` (**primary lockout key** = GetSavedInstanceInfo 14th = GetInstanceInfo 8th),
-  `lockout` (English name, fallback only — **useless on frFR clients**), `questId` (world boss), `reqDiff`+`diffScope`,
-  `encounters` (`[mountSpellId]=DungeonEncounterID`), `lowPriority`.
-- **Modules/Route.lua** — `BuildTargets()` (flatten, prune collected + wrong-faction, keep breadcrumb).
-  `ns.RouteHops` (English hop label → `{v=verb, m=uiMapID}`) + `ns.LocalizeHop(label)` (zone name via `C_Map.GetMapInfo`,
-  verb via L template; falls back to hand string / English).
+- **Locales/enUS.lua** — every English key (reference). **Locales/frFR.lua** — French values (guarded
+  `if GetLocale()~="frFR"`), incl. **instance-name overrides** and the filter / tooltip strings.
+- **Data/MountsInstances.lua** (GENERATED) — dungeon/raid/world-boss drops: category, expansion, continent/zone(+name),
+  x/y, instance, journalInstanceID, boss, encounterID, mountID, spellID, itemID, mount, faction, difficulties, order.
+- **Data/MountsWorld.lua** (GENERATED) — open-world drops, classified `category` = rare/event/vendor/treasure (from source
+  text) + `zoneName` + `vendor`. HIDDEN by default for now (see Route `categoryEnabled`).
+- **Data/ExtraMounts.lua** (HAND) — trash/timed mounts the EJ can't expose (AQ tanks 117/118/119/120, black 122 legacy;
+  Amani bear 419): `mountID` + `instanceId` + coords.
+- **Data/Overrides.lua** (HAND) — the irreducible runtime overrides keyed by IDs:
+  `EasyMountFarmerInstanceInfo[journalInstanceID]` = {instanceId, lowPriority, entranceJID/entranceMaps, coord override, encByMount};
+  `EasyMountFarmerWorldBossInfo[mountID]` = {questId, coords}; `EasyMountFarmerOrder` = the hand visiting order (conditional Ny'alotha).
+- **Modules/Route.lua** — `BuildTargets()` groups the generated data + Extra + World into **fully-enriched targets**
+  (merged with Overrides), pruning collected / wrong-faction / legacy / disabled-category mounts. Keys: dungeon/raid →
+  `"i:"..jid`, world boss/rare → `"m:"..mountID`, trash → `"x:"..instance`. Difficulty (`reqDiff`/`diffScope`) and reset
+  `type` are DERIVED from `difficulties`. `orderManual` applies `EasyMountFarmerOrder` (hand order; Ny'alotha slotted by its
+  live entrance; world rares slotted right after the stop in their zone); a geographic auto-order is the fallback.
+  `categoryEnabled` — **world categories (`IS_WORLD`) return false for now** (hidden; data kept). `ns.EXPANSION_ORDER`,
+  `ComputeStart`/rotation exist (rotation used only by the geographic fallback).
 - **Modules/Progress.lua** — the one-step engine. `ns.activeTargets` = ALL targets with uncollected mounts (done-this-reset
   ones STAY, shown with a marker; only a **collected** mount removes a step). `ns.autoFollow` (session) + `ns.db.autoAdvance`
   (pref) → `AutoFollowing()`; while true the pointer auto-snaps to `FirstUndoneIndex()`. `Next/Prev` turn autoFollow off.
@@ -55,7 +65,7 @@ Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Waypoint, Navig
 - **Navigation/Waypoint.lua** — `SetTo(map,x01,y01,title)` / `GuideTo(target,silent)` / `Clear()`. TomTom if present AND
   `db.useTomTom`, else Blizzard user waypoint. Tracks its own waypoint so Clear only removes ours. Also owns
   **`ns.EntranceFor(key)`** — the shared entrance resolver (0-100): live from the Encounter Journal when the run defines
-  `entranceJID`+`entranceMaps` (moving portals — see learnings), else static `Locations` coords. Nav AND Waypoint both use it.
+  `entranceJID`+`entranceMaps` (moving portals — see learnings), else the target's own coords (resolved via `ns.targetsByKey`). Nav AND Waypoint both use it.
 - **Navigation/Travel.lua** — the **docked secure action button**. Parented to **UIParent** (so the window has no protected
   child and can move/resize freely) but **anchored to the action panel** (a Frame) so it sits inside the window.
   `Ensure(panel)`, `ShowAction(kind,id,labelOverride)` (sets `Travel.active`+`Travel.label`; defers attrs/show in combat),
@@ -65,22 +75,24 @@ Modules\Lockouts, Modules\Difficulty, Modules\Detect, Navigation\Waypoint, Navig
   **always falls back to the entrance waypoint** if the hop has no usable loc. Returns false only when the target has no coords.
   Note: FarstriderLib **routes to the coords WE give it** — it does not pick entrances; a wrong/faction-hostile hop
   (e.g. an Orgrimmar portal for an Alliance player) is the symptom of a wrong destination coord, not a router bug.
-- **UI/UI.lua** — the flat card. Header (icon [click→`ToggleCollectionsJournal(1)`] + centered title + **gear**⚙ + close×),
-  step/count, **ROUTE box** (bullet list via LocalizeHop), **two-line headline** (dim action line "Faire le donjon" + big amber
-  localized instance/boss name), boss rows (icon+mount+boss+diff badge), diff-switch button, Prev/Done/Next (right-click ‹/› =
-  ResetPointer). Localization helpers: mount name (journal), instance/boss (mount **source text** — strip `|c…|r` color codes &
-  `|T…|t`, split on `|n`, capitalize first ASCII letter; world boss uses source line 1 = boss, else line 2 = instance).
-  Done step → dim rows + green "Terminé ce reset" marker. Leave-instance panel (hearthstone item 6948 + "Sortir de l'instance /
-  Pierre de foyer") shows when `inInstance and ns.leaveInstanceHint` (no FarstriderLib needed). **"Wait for reset" step**: when
-  auto-following AND `not AnyUndone()` (everything done this reset but mounts remain), Refresh short-circuits to a dedicated screen
-  ("Tout est fait pour ce reset" + guidance + the relevant countdown(s) via `pendingResets()`/`f.waitInfo`); ‹ still browses done steps. **Settings = native game panel**:
-  `UI.BuildSettings()` (Settings.RegisterVerticalLayoutCategory + RegisterProxySetting + CreateCheckbox/CreateDropdown),
-  `UI.OpenSettings()` (Settings.OpenToCategory). Options: autoAdvance, useTomTom (only if TomTom loaded), lootPopup,
-  lootChannel dropdown (NONE/PARTY/RAID/GUILD), autoGuide, showMinimap. Window pos + open/closed state persist (`db.pos`, `db.shown`).
+- **UI/UI.lua** — the flat card. Header (mount icon [click→`ToggleCollectionsJournal(1)`] + centered title + **gear**⚙ + close×).
+  Counter row: **Step N/M** (left) · **X mounts to find** (centered) · **"Filters"** button (right-aligned). The **filter is an
+  in-window popup** (`UI.BuildFilterPanel`/`ToggleFilter`, flat check rows; `UI.PositionFilterPanel` opens it on whichever side has
+  room) — currently only **Dungeons/Raids/World bosses/Trash + per-expansion** (the world sub-categories are hidden). Headline =
+  `targetParts` (dim action line + big amber name, per category). Boss rows (icon+mount+boss+diff badge); **row tooltip** adds the
+  **expansion**, `dropInfo` (where it drops), and a **"Ctrl + click to preview"** hint → Ctrl+click = `previewMount`
+  (`DressUpMount`). Name resolution from the mount **source text** (strip `|c…|r` & `|T…|t`, split on `|n`, capitalize first ASCII
+  letter). Done step → dim rows + green marker. Leave-instance panel (hearthstone 6948) when `inInstance and ns.leaveInstanceHint`.
+  **"Wait for reset" step** when auto-following AND `not AnyUndone()` (countdowns via `pendingResets()`/`f.waitInfo`).
+  **`UI.Refresh` no-ops in combat** (the docked secure button can't move mid-combat); Travel re-runs it on `PLAYER_REGEN_ENABLED`.
+  **`UI.Hide` clears our waypoint** (`Waypoint.Clear`) + resets `lastGuidedKey`. **Settings = native panel** (`UI.BuildSettings`/
+  `OpenSettings`): autoAdvance, useTomTom (if loaded), lootPopup, lootChannel, autoGuide, showMinimap, **locked** (lock window
+  position — replaces the old header lock button). Window pos + shown state persist (`db.pos`, `db.shown`).
 - **UI/MinimapButton.lua** — self-contained. Left-click toggle, right-click ResetAllDone.
-- **Core/Core.lua** — saved-var init/defaults (autoGuide, shown, autoAdvance, useTomTom, lootPopup, lootChannel="NONE",
-  minimap); onLogin (Init, BuildSettings, Minimap.Init, CheckResets, ResetPointer, restore shown); events; 30s ticker;
-  slash `/emf` (toggle|next|prev|guide|reset|minimap|arrow|debug|**nav**|**enc**|help).
+- **Core/Core.lua** — saved-var init/defaults (autoGuide, shown, autoAdvance, useTomTom, lootPopup, lootChannel, minimap,
+  **locked**, **filter** = categories+expansions with world sub-categories off); onLogin (Init, BuildSettings, Minimap.Init,
+  CheckResets, **Route.ComputeStart**, Rebuild, ResetPointer, restore shown); events; 30s ticker; slash `/emf`
+  (toggle|next|prev|guide|reset|minimap|arrow|debug|nav|enc|entrance|route|mapid|**gen** [dev-only, guarded]|help).
 
 ## Key technical learnings (do NOT relearn)
 - **Mount source text carries color codes** (`|cff…|r`) and uses **`|n`** as line separator. MUST strip codes + split on `|n`,
